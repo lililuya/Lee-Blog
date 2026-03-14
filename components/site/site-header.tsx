@@ -21,7 +21,7 @@ export function SiteHeader({ currentUser }: SiteHeaderProps) {
             <div>
               <div className="font-serif text-xl font-semibold tracking-tight">Lee</div>
               <div className="text-sm text-[var(--ink-soft)]">
-                Lee's daily blog
+                Lee&apos;s daily blog
               </div>
             </div>
           </Link>

@@ -25,6 +25,15 @@ type ChatWidgetProps = {
 type WidgetMessage = {
   role: "user" | "assistant";
   content: string;
+  citations?: Array<{
+    id: string;
+    title: string;
+    href: string;
+    kindLabel: string;
+    snippet: string;
+    visibility: "public" | "private";
+    isCurrentPage: boolean;
+  }>;
 };
 
 function getInitialAssistantMessage(currentUser: ChatWidgetProps["currentUser"], providers: ChatProvider[]) {
@@ -81,6 +90,7 @@ export function ChatWidget({ providers, currentUser }: ChatWidgetProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             providerSlug: selectedProvider,
+            pathname,
             messages: nextMessages,
           }),
         });
@@ -91,7 +101,14 @@ export function ChatWidget({ providers, currentUser }: ChatWidgetProps) {
           throw new Error(data.error ?? "Chat failed.");
         }
 
-        setMessages((current) => [...current, { role: "assistant", content: data.content }]);
+        setMessages((current) => [
+          ...current,
+          {
+            role: "assistant",
+            content: data.content,
+            citations: Array.isArray(data.citations) ? data.citations : [],
+          },
+        ]);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "Chat failed.");
       }
@@ -176,7 +193,35 @@ export function ChatWidget({ providers, currentUser }: ChatWidgetProps) {
                   message.role === "assistant" ? "theme-chat-bubble-assistant" : "theme-chat-bubble-user ml-auto"
                 }`}
               >
-                {message.content}
+                <div>{message.content}</div>
+                {message.role === "assistant" && message.citations && message.citations.length > 0 ? (
+                  <div className="mt-4 space-y-2 border-t border-black/8 pt-3">
+                    <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
+                      Sources
+                    </div>
+                    <div className="space-y-2">
+                      {message.citations.map((citation) => (
+                        <Link
+                          key={citation.id}
+                          href={citation.href}
+                          className="block rounded-[1rem] border border-black/8 bg-[rgba(255,255,255,0.4)] px-3 py-2 transition hover:border-[var(--accent)]"
+                        >
+                          <div className="flex flex-wrap items-center gap-2 text-[0.72rem] text-[var(--ink-soft)]">
+                            <span className="font-semibold text-[var(--accent-strong)]">{citation.kindLabel}</span>
+                            {citation.isCurrentPage ? <span>Current page</span> : null}
+                            {citation.visibility === "private" ? <span>Private</span> : null}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold leading-6 text-[var(--ink)]">
+                            {citation.title}
+                          </div>
+                          <div className="mt-1 line-clamp-3 text-xs leading-5 text-[var(--ink-soft)]">
+                            {citation.snippet}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ))}
             {isPending ? (

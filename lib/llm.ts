@@ -6,7 +6,14 @@ export type ChatMessage = {
   content: string;
 };
 
-export async function requestChatCompletion(providerSlug: string, messages: ChatMessage[]) {
+export type ChatCompletionOptions = {
+  messages: ChatMessage[];
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
+};
+
+export async function requestChatCompletion(providerSlug: string, options: ChatCompletionOptions) {
   const provider = await getChatProviderBySlug(providerSlug);
 
   if (!provider || !provider.enabled) {
@@ -19,6 +26,11 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
     throw new Error(`Environment variable ${provider.apiKeyEnv} is missing or empty.`);
   }
 
+  const mergedSystemPrompt = [provider.systemPrompt, options.systemPrompt]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join("\n\n");
+
   if (provider.adapter === ProviderAdapter.OPENAI_COMPATIBLE) {
     const response = await fetch(`${provider.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
@@ -29,10 +41,11 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
       body: JSON.stringify({
         model: provider.model,
         messages: [
-          ...(provider.systemPrompt ? [{ role: "system", content: provider.systemPrompt }] : []),
-          ...messages,
+          ...(mergedSystemPrompt ? [{ role: "system", content: mergedSystemPrompt }] : []),
+          ...options.messages,
         ],
-        temperature: 0.7,
+        temperature: options.temperature ?? 0.35,
+        max_tokens: options.maxTokens ?? 1024,
       }),
     });
 
@@ -46,7 +59,7 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
   }
 
   if (provider.adapter === ProviderAdapter.ANTHROPIC) {
-    const systemMessage = provider.systemPrompt ?? undefined;
+    const systemMessage = mergedSystemPrompt || undefined;
     const response = await fetch(`${provider.baseUrl.replace(/\/$/, "")}/messages`, {
       method: "POST",
       headers: {
@@ -57,8 +70,8 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
       body: JSON.stringify({
         model: provider.model,
         system: systemMessage,
-        max_tokens: 1024,
-        messages: messages.filter((message) => message.role !== "system"),
+        max_tokens: options.maxTokens ?? 1024,
+        messages: options.messages.filter((message) => message.role !== "system"),
       }),
     });
 
