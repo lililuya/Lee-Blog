@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  READER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JournalStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ProviderAdapter {
+  OPENAI_COMPATIBLE
+  ANTHROPIC
+}
+
+enum PaperReadingStatus {
+  TO_READ
+  READING
+  COMPLETED
+  ARCHIVED
+}
+
+model User {
+  id                String            @id @default(cuid())
+  name              String
+  email             String            @unique
+  passwordHash      String
+  role              UserRole          @default(READER)
+  status            UserStatus        @default(ACTIVE)
+  mutedUntil        DateTime?
+  muteReason        String?           @db.Text
+  statusReason      String?           @db.Text
+  lastLoginAt       DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  sessions          Session[]
+  posts             Post[]
+  notes             Note[]
+  comments          Comment[]
+  auditLogsAuthored AdminAuditLog[]   @relation("AdminAuditActor")
+  auditLogsTargeted AdminAuditLog[]   @relation("AdminAuditTarget")
+  paperLibraryItems  PaperLibraryItem[]
+  paperAnnotations   PaperAnnotation[]
+
+  @@index([role, status])
+  @@index([status])
+  @@index([mutedUntil])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  action       String
+  summary      String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  actorId      String?
+  targetUserId String?
+  actor        User?    @relation("AdminAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser   User?    @relation("AdminAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([targetUserId, createdAt(sort: Desc)])
+}
+
+model SiteProfile {
+  id                 String   @id @default("main")
+  fullName           String
+  headline           String
+  tagline            String
+  shortBio           String   @db.Text
+  longBio            String   @db.Text
+  institution        String?
+  department         String?
+  location           String?
+  email              String?
+  websiteUrl         String?
+  githubUrl          String?
+  linkedinUrl        String?
+  scholarUrl         String?
+  cvUrl              String?
+  heroImageUrl       String?
+  researchAreas      String[]
+  educationMarkdown  String   @db.Text
+  experienceMarkdown String   @db.Text
+  awardsMarkdown     String   @db.Text
+  speakingMarkdown   String   @db.Text
+  updatedAt          DateTime @updatedAt
+}
+
+model Post {
+  id              String     @id @default(cuid())
+  title           String
+  slug            String     @unique
+  excerpt         String     @db.Text
+  content         String     @db.Text
+  category        String
+  tags            String[]
+  status          PostStatus @default(DRAFT)
+  featured        Boolean    @default(false)
+  coverImageUrl   String?
+  readTimeMinutes Int        @default(5)
+  publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  authorId        String
+  author          User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  comments        Comment[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([category])
+}
+
+
+model Note {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  summary     String     @db.Text
+  content     String     @db.Text
+  noteType    String?
+  tags        String[]
+  status      PostStatus @default(DRAFT)
+  featured    Boolean    @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  authorId    String
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([noteType])
+}
+model JournalEntry {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  summary     String        @db.Text
+  content     String        @db.Text
+  mood        String?
+  status      JournalStatus @default(PUBLISHED)
+  publishedAt DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, publishedAt(sort: Desc)])
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  content   String        @db.Text
+  status    CommentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  postId    String
+  authorId  String
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, status, createdAt(sort: Desc)])
+  @@index([authorId])
+}
+
+model LlmProvider {
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  adapter      ProviderAdapter @default(OPENAI_COMPATIBLE)
+  baseUrl      String
+  model        String
+  apiKeyEnv    String
+  systemPrompt String?         @db.Text
+  enabled      Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model PaperTopic {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  description String?          @db.Text
+  query       String           @db.Text
+  maxResults  Int              @default(5)
+  enabled     Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  entries     DailyPaperEntry[]
+}
+
+model DailyPaperEntry {
+  id              String     @id @default(cuid())
+  digestDate      DateTime
+  arxivId         String
+  title           String
+  summary         String     @db.Text
+  authors         String[]
+  paperUrl        String
+  pdfUrl          String?
+  primaryCategory String?
+  publishedAt     DateTime
+  updatedAt       DateTime
+  createdAt       DateTime   @default(now())
+  topicId         String
+  topic           PaperTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([digestDate, topicId, arxivId])
+  @@index([digestDate(sort: Desc)])
+  @@index([topicId, digestDate(sort: Desc)])
+}
+
+model PaperLibraryItem {
+  id              String             @id @default(cuid())
+  arxivId         String
+  title           String
+  summary         String             @db.Text
+  authors         String[]
+  paperUrl        String
+  pdfUrl          String?
+  primaryCategory String?
+  topicName       String?
+  digestDate      DateTime?
+  status          PaperReadingStatus @default(TO_READ)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  annotations     PaperAnnotation[]
+
+  @@unique([userId, arxivId])
+  @@index([userId, status, updatedAt(sort: Desc)])
+  @@index([arxivId])
+}
+
+model PaperAnnotation {
+  id            String           @id @default(cuid())
+  content       String           @db.Text
+  quote         String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  libraryItemId String
+  userId        String
+  libraryItem   PaperLibraryItem @relation(fields: [libraryItemId], references: [id], onDelete: Cascade)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([libraryItemId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model SiteVisitor {
+  id          String   @id @default(cuid())
+  ipHash      String   @unique
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  visitCount  Int      @default(1)
+  lastPath    String?
+  countryCode String?
+  regionKey   String?
+  regionLabel String?
+  timezone    String?
+  language    String?
+  userAgent   String?  @db.Text
+
+  @@index([lastSeenAt(sort: Desc)])
+  @@index([regionKey, lastSeenAt(sort: Desc)])
+}
+model WeeklyDigest {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  summary        String   @db.Text
+  content        String   @db.Text
+  highlights     String[]
+  featuredTopics String[]
+  paperCount     Int      @default(0)
+  journalCount   Int      @default(0)
+  postCount      Int      @default(0)
+  periodStart    DateTime
+  periodEnd      DateTime
+  publishedAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([periodStart, periodEnd])
+  @@index([publishedAt(sort: Desc)])
+}
