@@ -13,6 +13,7 @@ export default async function AdminProfilePage() {
         <p className="section-kicker">Profile</p>
         <h1 className="font-serif text-4xl font-semibold tracking-tight">主页信息管理</h1>
       </div>
+
       <ProfileForm action={saveProfileAction} profile={profile} />
     </div>
   );

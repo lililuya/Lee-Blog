@@ -1,210 +1,186 @@
 # Architecture
 
-## 1. Project goal
+This document describes the current architecture of Scholar Blog Studio as of the latest integrated blog + research workspace build.
 
-This is not a static homepage that only displays profile information.
-It is a full-stack personal publishing system designed for long-term maintenance.
+## 1. Product shape
 
-The product goals are:
-
-- present an academic-style personal homepage
-- support long-form writing and lighter journal updates
-- provide comment moderation and admin workflows
-- connect research input with research output through papers and weekly digests
-- leave room for future AI tools
-- stay easy to deploy and operate as a single self-managed application
-
-## 2. Why an integrated full-stack repository is a good fit here
-
-In current industry practice, blogs do not all use the same architecture.
-Common patterns include:
-
-1. static sites
-2. frontend/backend split applications
-3. integrated full-stack applications
-
-This project uses the third model.
+The project uses a single-repository integrated full-stack architecture.
 
 That means:
 
-- pages, backend logic, auth, admin, and database access are kept in one repository
-- the application is still layered, but it is deployed and maintained as one system
-- validation, auth rules, and data access are shared across the stack
+- public pages, admin pages, APIs, and server actions live in one Next.js application
+- Prisma provides one typed data layer for all product modules
+- business rules, validation, and permission checks are shared instead of duplicated
+- the app can evolve from a simple blog into a research workspace without splitting stacks too early
 
-For a self-managed blog, this reduces complexity in:
+This architecture is a good fit because the product already combines:
 
-- deployment
-- maintenance
-- debugging
-- future feature expansion
+- content publishing
+- account lifecycle and moderation
+- research paper ingestion
+- scheduled jobs
+- AI/RAG features
+- internal admin tooling
 
-It is especially useful once you add admin tools, comment flows, scheduled jobs, and AI service modules.
+## 2. Runtime layers
 
-## 3. System modules
+### Presentation layer
 
-### Public site
+Implemented with:
 
-- `/` homepage
-- `/blog` blog index
-- `/blog/[slug]` post detail and comments
-- `/journal` journal index
-- `/papers` daily paper archive
-- `/digest` weekly digest index
-- `/digest/[slug]` weekly digest detail
-- `/search` site search
-- `/tools` reserved tools area
-- `/login` / `/register` auth pages
-- `/feed.xml` / `/feed.json` feed output
+- Next.js App Router pages and layouts
+- React Server Components for data-heavy pages
+- client components for interactive widgets, forms, and chat
+- Tailwind CSS for styling
 
-### Admin site
+Primary directories:
 
-- `/admin` dashboard overview
-- `/admin/posts` post management
-- `/admin/journal` journal management
-- `/admin/comments` comment moderation
-- `/admin/profile` profile management
-- `/admin/providers` LLM provider management
-- `/admin/papers` paper topic management
-- `/admin/digests` weekly digest management
-- `/admin/users` user management and permissions
+- `app/`
+- `components/`
 
-### Server capabilities
+### Application layer
 
-- `/api/auth/login`
-- `/api/auth/register`
-- `/api/auth/logout`
-- `/api/chat`
-- `lib/actions/*` server actions for admin forms, comments, paper sync, digests, and user moderation
+Implemented with:
 
-## 4. Data flow
+- server actions in `lib/actions/*`
+- query helpers in `lib/queries.ts` and related modules
+- domain-specific services such as auth, moderation, notifications, and RAG helpers
 
-### Read path
+Primary directories:
 
-1. pages call functions in `lib/queries.ts`
-2. queries load data from PostgreSQL through Prisma
-3. if the database is not configured, the app can fall back to demo data for selected public pages
-4. server components render with fetched data directly
+- `lib/actions/`
+- `lib/`
 
-### Write path
+### Data layer
 
-1. admin forms submit to `lib/actions/*`
-2. input is validated with Zod
-3. Prisma writes to PostgreSQL
-4. `revalidatePath` refreshes affected pages
-5. the user is redirected back to the relevant screen
+Implemented with:
 
-### Auth path
+- Prisma schema in `prisma/schema.prisma`
+- PostgreSQL as the main runtime database
+- seeded demo/admin data in `prisma/seed.ts`
 
-1. sign-in or registration goes through `/api/auth/*`
-2. the app validates credentials against the `User` table
-3. a `Session` record is created
-4. the session token is stored in an HttpOnly cookie
-5. server-side route protection reads the current user from the session
+### Integration layer
 
-## 5. Papers and digests
+Implemented with:
 
-### Daily papers
+- route handlers in `app/api/*`
+- email delivery via Nodemailer
+- arXiv sync scripts
+- external LLM and transcription provider adapters
 
-Admins configure `PaperTopic` entries with:
+## 3. Main bounded contexts
 
-- topic name
-- arXiv query string
-- maximum result count
-- enabled status
+The repository now contains several clear product domains.
 
-Then papers can be synced through:
+### Publishing and content
 
-- admin controls
+- blog posts
+- notes
+- journal entries
+- content series
+- tags and categories
+- archives and related-post recommendations
+- revision history and scheduled publishing
+
+### Accounts, security, and moderation
+
+- registration and login
+- email verification
+- forgot/reset/change password
+- custom session management
+- admin-only 2FA
+- login rate limiting and unusual login alerts
+- user role/status management
+- comment moderation, anti-spam, and rule management
+- in-app and email notifications
+
+### Research workspace
+
+- paper topics and daily arXiv sync
+- personal paper library
+- paper annotations and progress tracking
+- weekly digest generation
+- citation and BibTeX export
+- backlinks from notes into other content
+
+### AI and RAG
+
+- provider registry for chat models
+- configurable transcription providers
+- API validation lab under `/tools`
+- floating site chat
+- hybrid RAG with manual knowledge sync
+- admin RAG console and sync status view
+
+### Operations
+
+- audit logs
+- export endpoints
+- analytics dashboard
+- deployment scripts and GitHub Actions workflows
+
+## 4. Request and write flows
+
+### Read flow
+
+1. A route in `app/` renders on the server.
+2. It calls query helpers from `lib/queries.ts` or related modules.
+3. Prisma fetches data from PostgreSQL.
+4. The page renders directly with typed data.
+
+### Write flow
+
+1. A form submits to a server action or API route.
+2. Zod validates the input.
+3. The application layer applies permission and business rules.
+4. Prisma writes to PostgreSQL.
+5. `revalidatePath()` refreshes affected pages.
+6. The user is redirected or receives a structured API response.
+
+### Background flow
+
+Scheduled or manual jobs run through scripts such as:
+
 - `npm run papers:sync`
-- GitHub Actions or server cron
+- `npm run digest:generate`
+- `npm run content:sync`
+- `npm run rag:sync`
 
-Synced items are stored as `DailyPaperEntry` records.
+These jobs update the database so the public site and admin tools stay in sync.
 
-### Weekly digests
+## 5. Security model
 
-Weekly digests are generated from:
+The project currently uses:
 
-- published posts
-- published journal entries
-- daily paper entries
+- database-backed sessions stored in an HttpOnly cookie
+- role checks (`ADMIN`, `READER`)
+- status checks (`ACTIVE`, `SUSPENDED`, `DELETED`)
+- admin route protection
+- email verification gates for comment participation
+- comment anti-spam rules
+- rate limiting on sensitive auth flows
+- admin-only 2FA
+- audit logs for privileged actions
 
-Core implementation:
+This is intentionally stronger than a typical personal blog because the product now includes provider keys, exports, and moderation workflows.
 
-- `lib/digests.ts`
-- `lib/actions/digest-actions.ts`
-- `scripts/generate-weekly-digest.ts`
+## 6. Extensibility
 
-The digest window is calculated using Asia/Shanghai local time and summarizes the previous complete week.
+The architecture deliberately leaves room for further expansion without major rewrites.
 
-## 6. User management model
+Current extension points include:
 
-The system now supports richer account state management.
+- adding new provider adapters
+- extending the `/tools` area with more AI utilities
+- expanding the RAG knowledge model
+- adding more exports and analytics reports
+- introducing object storage or richer media pipelines
 
-### Role
+## 7. Recommended reading order
 
-- `ADMIN`
-- `READER`
+If you are onboarding to the codebase, read these next:
 
-### Status
-
-- `ACTIVE`
-- `SUSPENDED`
-- `DELETED`
-
-### Moderation-related fields
-
-- `mutedUntil`
-- `muteReason`
-- `statusReason`
-- `lastLoginAt`
-- `deletedAt`
-
-### Rules
-
-- muted users can still sign in but cannot post comments
-- suspended users cannot sign in
-- deleted users are soft-deleted and cannot sign in
-- self-destructive admin actions are blocked
-- the last active admin account cannot be demoted, suspended, or deleted
-
-## 7. Core data models
-
-- `User`
-- `Session`
-- `SiteProfile`
-- `Post`
-- `JournalEntry`
-- `Comment`
-- `LlmProvider`
-- `PaperTopic`
-- `DailyPaperEntry`
-- `WeeklyDigest`
-
-## 8. Recommended way to read the repo
-
-```text
-app/
-  public routes, admin routes, api routes
-components/
-  site, admin, forms, ui
-lib/
-  auth, queries, prisma, actions, papers, digests, feeds, user-state
-prisma/
-  schema.prisma, seed.ts
-scripts/
-  sync-daily-papers.ts, generate-weekly-digest.ts
-.github/workflows/
-  ci, deploy, daily-papers, weekly-digest
-```
-
-## 9. Extension priorities
-
-Recommended next product steps:
-
-- saved papers and annotations
-- stronger tag/topic archives
-- newsletter delivery
-- full-text search improvements
-- image upload and object storage
-- observability and alerting
-- AI writing and research assistant tools in `/tools`
+1. [feature-overview.md](./feature-overview.md)
+2. [routes-and-apis.md](./routes-and-apis.md)
+3. [deployment.md](./deployment.md)
+4. [rag-v2.md](./rag-v2.md)

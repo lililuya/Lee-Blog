@@ -9,7 +9,16 @@ export const ADMIN_AUDIT_ACTIONS = {
   USER_RESTORED: "user.restored",
   USER_DELETED: "user.deleted",
   USER_SESSIONS_REVOKED: "user.sessions.revoked",
+  USER_2FA_ENABLED: "user.2fa.enabled",
+  USER_2FA_DISABLED: "user.2fa.disabled",
+  SERIES_SAVED: "series.saved",
+  SERIES_DELETED: "series.deleted",
   COMMENT_MODERATED: "comment.moderated",
+  COMMENT_DELETED: "comment.deleted",
+  COMMENT_RULE_SAVED: "comment.rule.saved",
+  COMMENT_RULE_DELETED: "comment.rule.deleted",
+  POST_REVISION_RESTORED: "post.revision.restored",
+  NOTE_REVISION_RESTORED: "note.revision.restored",
 } as const;
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[keyof typeof ADMIN_AUDIT_ACTIONS];
@@ -50,8 +59,26 @@ export function formatAdminAuditAction(action: string) {
       return "Soft Delete";
     case ADMIN_AUDIT_ACTIONS.USER_SESSIONS_REVOKED:
       return "Session Revocation";
+    case ADMIN_AUDIT_ACTIONS.USER_2FA_ENABLED:
+      return "2FA Enabled";
+    case ADMIN_AUDIT_ACTIONS.USER_2FA_DISABLED:
+      return "2FA Disabled";
+    case ADMIN_AUDIT_ACTIONS.SERIES_SAVED:
+      return "Series Saved";
+    case ADMIN_AUDIT_ACTIONS.SERIES_DELETED:
+      return "Series Deleted";
     case ADMIN_AUDIT_ACTIONS.COMMENT_MODERATED:
       return "Comment Moderation";
+    case ADMIN_AUDIT_ACTIONS.COMMENT_DELETED:
+      return "Comment Deletion";
+    case ADMIN_AUDIT_ACTIONS.COMMENT_RULE_SAVED:
+      return "Comment Rule Saved";
+    case ADMIN_AUDIT_ACTIONS.COMMENT_RULE_DELETED:
+      return "Comment Rule Deleted";
+    case ADMIN_AUDIT_ACTIONS.POST_REVISION_RESTORED:
+      return "Post Revision Restore";
+    case ADMIN_AUDIT_ACTIONS.NOTE_REVISION_RESTORED:
+      return "Note Revision Restore";
     default:
       return action;
   }

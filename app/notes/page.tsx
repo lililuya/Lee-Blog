@@ -16,6 +16,8 @@ export default async function NotesIndexPage() {
           kicker="Notes"
           title="Evergreen notes"
           description="This module is for durable knowledge cards: concept summaries, reading takeaways, method notes, checklists, and reference snippets that should stay useful longer than a journal entry but do not need to become a full blog post."
+          href="/tags"
+          linkLabel="Browse tags"
         />
 
         <div className="grid gap-4 md:grid-cols-3">

@@ -1,20 +1,32 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { CurrentUser } from "@/lib/auth";
-import { demoJournalEntries, demoNotes, demoPaperEntries, demoPosts, demoWeeklyDigests } from "@/lib/demo-data";
+import {
+  demoJournalEntries,
+  demoNotes,
+  demoPaperEntries,
+  demoPosts,
+  demoWeeklyDigests,
+} from "@/lib/demo-data";
+import {
+  getPublishingCutoff,
+  isLivePublishedAt,
+  isPublicJournalLike,
+  isPublicPostLike,
+  publicJournalWhere,
+  publicNoteWhere,
+  publicPostWhere,
+  publicWeeklyDigestWhere,
+} from "@/lib/content-visibility";
 import { getNoteBySlug, getPostBySlug, getWeeklyDigestBySlug } from "@/lib/queries";
 import { getContentStats, isDatabaseConfigured } from "@/lib/utils";
-import type { ChatMessage } from "@/lib/llm";
-import type { ChatCitation } from "@/lib/chat/types";
-
-type RetrievedSource = ChatCitation & {
-  score: number;
-  content: string;
-};
+import { getChatMessageText, hasChatAttachments, type ChatMessage } from "@/lib/chat/message";
+import { retrieveSemanticCandidates } from "@/lib/chat/semantic";
+import type { RetrievedChatSource } from "@/lib/chat/types";
 
 type RetrievalResult = {
   query: string;
-  sources: RetrievedSource[];
+  sources: RetrievedChatSource[];
   usedPageContext: boolean;
 };
 
@@ -35,7 +47,7 @@ function extractQueryTerms(query: string) {
 }
 
 function truncate(value: string, maxLength: number) {
-  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 1).trimEnd()}…`;
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 function buildSnippet(text: string, query: string, maxLength = 220) {
@@ -60,8 +72,8 @@ function buildSnippet(text: string, query: string, maxLength = 220) {
   const matchIndex = normalizedText.indexOf(matchTerm);
   const snippetStart = Math.max(0, matchIndex - Math.floor(maxLength * 0.35));
   const snippetEnd = Math.min(plainText.length, snippetStart + maxLength);
-  const prefix = snippetStart > 0 ? "…" : "";
-  const suffix = snippetEnd < plainText.length ? "…" : "";
+  const prefix = snippetStart > 0 ? "..." : "";
+  const suffix = snippetEnd < plainText.length ? "..." : "";
 
   return `${prefix}${plainText.slice(snippetStart, snippetEnd).trim()}${suffix}`;
 }
@@ -111,24 +123,40 @@ function buildSource(input: {
     score: input.score,
     snippet: buildSnippet(input.snippetSource, input.query),
     content: truncate(getContentStats(input.contentSource).plainText, 1400),
-  } satisfies RetrievedSource;
+  } satisfies RetrievedChatSource;
 }
 
-function dedupeSources(sources: RetrievedSource[]) {
-  const sourceMap = new Map<string, RetrievedSource>();
+function dedupeSources(sources: RetrievedChatSource[]) {
+  const sourceMap = new Map<string, RetrievedChatSource>();
 
   for (const source of sources) {
     const key = `${source.href}::${source.title}`;
     const existing = sourceMap.get(key);
 
-    if (!existing || source.score > existing.score) {
+    if (!existing) {
       sourceMap.set(key, source);
       continue;
     }
 
-    if (!existing.isCurrentPage && source.isCurrentPage) {
-      sourceMap.set(key, { ...existing, isCurrentPage: true, score: source.score });
+    const merged: RetrievedChatSource = {
+      ...existing,
+      score: existing.score + source.score,
+      isCurrentPage: existing.isCurrentPage || source.isCurrentPage,
+      visibility:
+        existing.visibility === "private" || source.visibility === "private"
+          ? "private"
+          : "public",
+    };
+
+    if (source.score > existing.score) {
+      merged.snippet = source.snippet;
+      merged.content = source.content;
+      merged.kindLabel = source.kindLabel;
+      merged.href = source.href;
+      merged.id = source.id;
     }
+
+    sourceMap.set(key, merged);
   }
 
   return [...sourceMap.values()].sort((left, right) => right.score - left.score);
@@ -140,7 +168,7 @@ function containsText(query: string) {
 
 async function resolveCurrentPageSource(
   pathname?: string | null,
-): Promise<RetrievedSource | null> {
+): Promise<RetrievedChatSource | null> {
   if (!pathname?.startsWith("/")) {
     return null;
   }
@@ -218,9 +246,13 @@ async function resolveCurrentPageSource(
 }
 
 function retrievePublicCandidatesFromDemo(query: string) {
-  const sources: RetrievedSource[] = [];
+  const sources: RetrievedChatSource[] = [];
 
   for (const post of demoPosts) {
+    if (!isPublicPostLike(post)) {
+      continue;
+    }
+
     const score =
       scoreField(query, post.title, 8) +
       scoreField(query, post.excerpt, 5) +
@@ -246,6 +278,10 @@ function retrievePublicCandidatesFromDemo(query: string) {
   }
 
   for (const note of demoNotes) {
+    if (!isPublicPostLike(note)) {
+      continue;
+    }
+
     const score =
       scoreField(query, note.title, 8) +
       scoreField(query, note.summary, 5) +
@@ -271,6 +307,10 @@ function retrievePublicCandidatesFromDemo(query: string) {
   }
 
   for (const entry of demoJournalEntries) {
+    if (!isPublicJournalLike(entry)) {
+      continue;
+    }
+
     const score =
       scoreField(query, entry.title, 7) +
       scoreField(query, entry.summary, 4) +
@@ -320,6 +360,10 @@ function retrievePublicCandidatesFromDemo(query: string) {
   }
 
   for (const digest of demoWeeklyDigests) {
+    if (!isLivePublishedAt(digest.publishedAt)) {
+      continue;
+    }
+
     const score =
       scoreField(query, digest.title, 8) +
       scoreField(query, digest.summary, 5) +
@@ -352,10 +396,11 @@ async function retrievePublicCandidates(query: string) {
     return retrievePublicCandidatesFromDemo(query);
   }
 
+  const cutoff = getPublishingCutoff();
   const [posts, notes, journalEntries, paperEntries, weeklyDigests] = await Promise.all([
     prisma.post.findMany({
       where: {
-        status: "PUBLISHED",
+        ...publicPostWhere(cutoff),
         OR: [
           { title: containsText(query) },
           { excerpt: containsText(query) },
@@ -377,7 +422,7 @@ async function retrievePublicCandidates(query: string) {
     }),
     prisma.note.findMany({
       where: {
-        status: "PUBLISHED",
+        ...publicNoteWhere(cutoff),
         OR: [
           { title: containsText(query) },
           { summary: containsText(query) },
@@ -399,7 +444,7 @@ async function retrievePublicCandidates(query: string) {
     }),
     prisma.journalEntry.findMany({
       where: {
-        status: "PUBLISHED",
+        ...publicJournalWhere(cutoff),
         OR: [
           { title: containsText(query) },
           { summary: containsText(query) },
@@ -443,6 +488,7 @@ async function retrievePublicCandidates(query: string) {
     }),
     prisma.weeklyDigest.findMany({
       where: {
+        ...publicWeeklyDigestWhere(cutoff),
         OR: [
           { title: containsText(query) },
           { summary: containsText(query) },
@@ -556,7 +602,10 @@ async function retrievePublicCandidates(query: string) {
   ].filter((source) => source.score > 0);
 }
 
-async function retrievePrivateCandidates(query: string, currentUser: NonNullable<CurrentUser>) {
+async function retrievePrivateCandidates(
+  query: string,
+  currentUser: NonNullable<CurrentUser>,
+) {
   if (!isDatabaseConfigured()) {
     return [];
   }
@@ -649,7 +698,15 @@ export function buildRetrievalQuery(messages: ChatMessage[]) {
   const recentUserMessages = messages
     .filter((message) => message.role === "user")
     .slice(-2)
-    .map((message) => message.content.trim())
+    .map((message) => {
+      const text = getChatMessageText(message);
+
+      if (text) {
+        return text;
+      }
+
+      return hasChatAttachments(message) ? "uploaded image" : "";
+    })
     .filter(Boolean);
 
   return recentUserMessages.join("\n").trim();
@@ -670,16 +727,17 @@ export async function retrieveChatContext(input: {
     };
   }
 
-  const [currentPageSource, publicSources, privateSources] = await Promise.all([
+  const [currentPageSource, semanticSources, publicSources, privateSources] = await Promise.all([
     resolveCurrentPageSource(input.pathname),
+    retrieveSemanticCandidates(query, input.currentUser),
     retrievePublicCandidates(query),
     retrievePrivateCandidates(query, input.currentUser),
   ]);
 
   const sources = dedupeSources(
-    [currentPageSource, ...publicSources, ...privateSources]
-      .filter((value): value is RetrievedSource => Boolean(value))
-      .slice(0, 18),
+    [currentPageSource, ...semanticSources, ...publicSources, ...privateSources].filter(
+      (value): value is RetrievedChatSource => Boolean(value),
+    ),
   ).slice(0, 6);
 
   return {

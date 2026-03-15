@@ -50,33 +50,45 @@ export async function POST(request: NextRequest) {
   const now = new Date();
 
   try {
-    await prisma.siteVisitor.upsert({
-      where: { ipHash },
-      create: {
-        ipHash,
-        firstSeenAt: now,
-        lastSeenAt: now,
-        visitCount: 1,
-        lastPath: path,
-        countryCode: countryCode?.slice(0, 8) ?? null,
-        regionKey: region.key,
-        regionLabel: region.label,
-        timezone,
-        language,
-        userAgent: userAgent?.slice(0, 400) ?? null,
-      },
-      update: {
-        lastSeenAt: now,
-        visitCount: { increment: 1 },
-        lastPath: path,
-        countryCode: countryCode?.slice(0, 8) ?? null,
-        regionKey: region.key,
-        regionLabel: region.label,
-        timezone,
-        language,
-        userAgent: userAgent?.slice(0, 400) ?? null,
-      },
-    });
+    await prisma.$transaction([
+      prisma.siteVisitor.upsert({
+        where: { ipHash },
+        create: {
+          ipHash,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          visitCount: 1,
+          lastPath: path,
+          countryCode: countryCode?.slice(0, 8) ?? null,
+          regionKey: region.key,
+          regionLabel: region.label,
+          timezone,
+          language,
+          userAgent: userAgent?.slice(0, 400) ?? null,
+        },
+        update: {
+          lastSeenAt: now,
+          visitCount: { increment: 1 },
+          lastPath: path,
+          countryCode: countryCode?.slice(0, 8) ?? null,
+          regionKey: region.key,
+          regionLabel: region.label,
+          timezone,
+          language,
+          userAgent: userAgent?.slice(0, 400) ?? null,
+        },
+      }),
+      prisma.pageView.create({
+        data: {
+          path,
+          visitorIpHash: ipHash,
+          countryCode: countryCode?.slice(0, 8) ?? null,
+          regionKey: region.key,
+          regionLabel: region.label,
+          createdAt: now,
+        },
+      }),
+    ]);
   } catch {
     return NextResponse.json({ ok: true, skipped: "storage" });
   }

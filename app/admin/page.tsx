@@ -1,12 +1,17 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import {
   ArrowRight,
+  BarChart3,
+  Database,
+  Download,
   FileSearch,
   History,
+  Layers3,
   MessageCircleReply,
   NotebookPen,
   PenSquare,
   ScrollText,
+  ShieldAlert,
   ShieldUser,
   Sparkles,
   Wrench,
@@ -17,6 +22,24 @@ import { getDashboardOverview } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 const quickLinks = [
+  {
+    href: "/admin/analytics",
+    title: "Analytics",
+    description: "Track page views, top content, archive usage, search terms, and discussion conversion.",
+    icon: BarChart3,
+  },
+  {
+    href: "/admin/rag",
+    title: "RAG Console",
+    description: "Inspect chunk coverage, embedding readiness, and semantic retrieval previews before users hit the chat layer.",
+    icon: Database,
+  },
+  {
+    href: "/admin/series",
+    title: "Content Series",
+    description: "Curate posts, notes, and digests into guided专题合集 and reading sequences.",
+    icon: Layers3,
+  },
   {
     href: "/admin/posts",
     title: "Manage Posts",
@@ -54,6 +77,12 @@ const quickLinks = [
     icon: MessageCircleReply,
   },
   {
+    href: "/admin/comments/rules",
+    title: "Comment Rules",
+    description: "Maintain custom allow rules, review rules, and hard reject keywords without editing code.",
+    icon: ShieldAlert,
+  },
+  {
     href: "/admin/users",
     title: "User Management",
     description: "Control user roles, comment mute states, login suspension, soft deletion, and session revocation.",
@@ -64,6 +93,12 @@ const quickLinks = [
     title: "Audit Trail",
     description: "Review privileged admin operations, including user moderation and comment moderation events.",
     icon: History,
+  },
+  {
+    href: "/admin/exports",
+    title: "Exports",
+    description: "Download JSON backups for migration, audits, and disaster recovery.",
+    icon: Download,
   },
   {
     href: "/admin/providers",
@@ -84,8 +119,7 @@ export default async function AdminDashboardPage() {
           Admin Overview
         </h1>
         <p className="max-w-3xl text-base leading-8 text-[var(--ink-soft)]">
-          This admin workspace now covers profile editing, content publishing, evergreen notes, daily paper sync,
-          weekly digests, comment moderation, user permissions, audit logging, and LLM provider management.
+          This workspace now covers publishing, note curation, paper sync, weekly digests, comment moderation, exports, analytics, and curated reading series.
         </p>
       </section>
 
@@ -96,6 +130,7 @@ export default async function AdminDashboardPage() {
         <StatCard label="Published Notes" value={stats.publishedNotes} hint="Shown on the public notes index and included in search/feed output." />
         <StatCard label="Journal Entries" value={stats.journalEntries} hint="Used for ongoing research notes and progress updates." />
         <StatCard label="Paper Topics" value={stats.paperTopics} hint="Currently enabled arXiv tracking topics." />
+        <StatCard label="Series" value={stats.series} hint="Curated reading tracks that can connect posts, notes, and digests." />
         <StatCard label="Today's Papers" value={stats.todayPapers} hint="Synced today using the Asia/Shanghai digest boundary." />
         <StatCard label="Weekly Digests" value={stats.weeklyDigests} hint="Public weekly digest entries already generated." />
         <StatCard label="Users" value={stats.users} hint="Excludes deleted accounts." />

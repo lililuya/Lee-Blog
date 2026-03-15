@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { Clock3, ExternalLink, FileText, Microscope } from "lucide-react";
+import { CitationPanel } from "@/components/site/citation-panel";
+import { SectionHeading } from "@/components/site/section-heading";
 import { getCurrentUser } from "@/lib/auth";
+import { savePaperToLibraryAction, updatePaperLibraryStatusAction } from "@/lib/actions/paper-actions";
 import {
+  formatPaperReadingStatus,
   paperLibraryErrorMap,
   paperLibraryNoticeMap,
   paperReadingStatusOptions,
-  formatPaperReadingStatus,
 } from "@/lib/paper-library";
-import {
-  getPaperLibraryItemsForArxivIds,
-  getUserPaperLibrary,
-} from "@/lib/paper-library-queries";
-import { savePaperToLibraryAction, updatePaperLibraryStatusAction } from "@/lib/actions/paper-actions";
-import { SectionHeading } from "@/components/site/section-heading";
+import { getPaperLibraryItemsForArxivIds, getUserPaperLibrary } from "@/lib/paper-library-queries";
 import { getPaperArchive } from "@/lib/queries";
+import { buildPaperBibtex, buildPaperCitation } from "@/lib/citations";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -58,10 +57,10 @@ export default async function PapersPage({
       <div className="space-y-10">
         <SectionHeading
           kicker="Daily Papers"
-          title="每日论文推送"
-          description="已登录用户现可收藏论文、追踪阅读进度，并构建一个轻量级的个人研究图书馆"
+          title="Daily paper radar"
+          description="Track fresh arXiv inputs by topic, save the ones worth keeping, and move them into a personal research queue with progress, notes, and citation export."
           href={currentUser ? "/papers/library" : "/login?next=/papers/library"}
-          linkLabel={currentUser ? "打开我的图书馆" : "登录后收藏论文"}
+          linkLabel={currentUser ? "Open my library" : "Sign in to save papers"}
         />
 
         {params.notice && paperLibraryNoticeMap[params.notice] ? (
@@ -81,14 +80,14 @@ export default async function PapersPage({
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Indexed Papers</p>
             <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{entries.length}</p>
             <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              新的论文卡片将按摘要日期分组，方便您回溯查阅之前的阅读记录。
+              Fresh paper cards are grouped by digest date so you can revisit recent research inputs without losing chronology.
             </p>
           </div>
           <div className="outline-card rounded-[1.8rem] p-5">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Tracked Topics</p>
             <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{topicCount}</p>
             <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              这些主题来自站点管理员管理的 arXiv 查询。
+              These topics come from the admin-managed arXiv queries that feed the site.
             </p>
           </div>
           <div className="outline-card rounded-[1.8rem] p-5">
@@ -96,15 +95,15 @@ export default async function PapersPage({
             <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{userLibrary.length}</p>
             <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
               {currentUser
-                ? `${readingCount} actively reading, ${completedCount} completed.`
-                : "Sign in to keep your own saved-paper queue and annotations."}
+                ? `${readingCount} currently reading, ${completedCount} completed.`
+                : "Sign in to keep a private reading queue, notes, and citation exports."}
             </p>
           </div>
           <div className="outline-card rounded-[1.8rem] p-5">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Suggested Sync Time</p>
             <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">08:00</p>
             <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              当前工作流程围绕着每天的上海时区早报更新而设计。
+              The current workflow assumes a daily morning pass in the Asia/Shanghai publication window.
             </p>
           </div>
         </div>
@@ -119,9 +118,26 @@ export default async function PapersPage({
                     {formatDate(group.date, "yyyy-MM-dd")}
                   </h2>
                 </div>
+
                 <div className="grid gap-4">
                   {group.items.map((entry) => {
                     const libraryItem = libraryMap.get(entry.arxivId);
+                    const citation = buildPaperCitation({
+                      arxivId: entry.arxivId,
+                      title: entry.title,
+                      authors: entry.authors,
+                      paperUrl: entry.paperUrl,
+                      publishedAt: entry.publishedAt,
+                      primaryCategory: entry.primaryCategory,
+                    });
+                    const bibtex = buildPaperBibtex({
+                      arxivId: entry.arxivId,
+                      title: entry.title,
+                      authors: entry.authors,
+                      paperUrl: entry.paperUrl,
+                      publishedAt: entry.publishedAt,
+                      primaryCategory: entry.primaryCategory,
+                    });
 
                     return (
                       <article
@@ -151,67 +167,84 @@ export default async function PapersPage({
                           ) : null}
                         </div>
 
-                        <div className="mt-6 rounded-[1.6rem] border border-black/8 bg-white/70 p-4">
-                          {currentUser ? (
-                            libraryItem ? (
-                              <div className="space-y-4">
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
-                                  <span className="badge-soft">Saved</span>
-                                  <span>{formatPaperReadingStatus(libraryItem.status)}</span>
-                                  <span>{libraryItem._count.annotations} annotation(s)</span>
+                        <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                          <div className="rounded-[1.6rem] border border-black/8 bg-white/70 p-4">
+                            {currentUser ? (
+                              libraryItem ? (
+                                <div className="space-y-4">
+                                  <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
+                                    <span className="badge-soft">Saved</span>
+                                    <span>{formatPaperReadingStatus(libraryItem.status)}</span>
+                                    <span>{libraryItem.progressPercent}% progress</span>
+                                    <span>{libraryItem._count.annotations} annotation(s)</span>
+                                  </div>
+                                  <div className="h-2 overflow-hidden rounded-full bg-[rgba(20,33,43,0.08)]">
+                                    <div
+                                      className="h-full rounded-full bg-[var(--accent)]"
+                                      style={{ width: `${Math.max(0, Math.min(100, libraryItem.progressPercent))}%` }}
+                                    />
+                                  </div>
+                                  <form action={updatePaperLibraryStatusAction} className="flex flex-wrap items-center gap-3">
+                                    <input type="hidden" name="libraryItemId" value={libraryItem.id} />
+                                    <input type="hidden" name="redirectTo" value="/papers" />
+                                    <select
+                                      name="status"
+                                      defaultValue={libraryItem.status}
+                                      className="field min-w-[11rem]"
+                                    >
+                                      {paperReadingStatusOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button type="submit" className="btn-secondary">
+                                      Update Status
+                                    </button>
+                                    <Link href="/papers/library" className="btn-secondary">
+                                      Open Library
+                                    </Link>
+                                  </form>
                                 </div>
-                                <form action={updatePaperLibraryStatusAction} className="flex flex-wrap items-center gap-3">
-                                  <input type="hidden" name="libraryItemId" value={libraryItem.id} />
+                              ) : (
+                                <form action={savePaperToLibraryAction} className="flex flex-wrap items-center gap-3">
                                   <input type="hidden" name="redirectTo" value="/papers" />
-                                  <select
-                                    name="status"
-                                    defaultValue={libraryItem.status}
-                                    className="field min-w-[11rem]"
-                                  >
-                                    {paperReadingStatusOptions.map((option) => (
-                                      <option key={option.value} value={option.value}>
-                                        {option.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button type="submit" className="btn-secondary">
-                                    Update Status
+                                  <input type="hidden" name="arxivId" value={entry.arxivId} />
+                                  <input type="hidden" name="title" value={entry.title} />
+                                  <input type="hidden" name="summary" value={entry.summary} />
+                                  <input type="hidden" name="authors" value={JSON.stringify(entry.authors)} />
+                                  <input type="hidden" name="paperUrl" value={entry.paperUrl} />
+                                  <input type="hidden" name="pdfUrl" value={entry.pdfUrl ?? ""} />
+                                  <input type="hidden" name="primaryCategory" value={entry.primaryCategory ?? ""} />
+                                  <input type="hidden" name="topicName" value={entry.topic.name} />
+                                  <input type="hidden" name="digestDate" value={entry.digestDate.toISOString()} />
+                                  <input type="hidden" name="publishedAt" value={entry.publishedAt.toISOString()} />
+                                  <button type="submit" className="btn-primary">
+                                    Save to Library
                                   </button>
-                                  <Link href="/papers/library" className="btn-secondary">
-                                    Open Library
-                                  </Link>
+                                  <p className="text-sm leading-7 text-[var(--ink-soft)]">
+                                    Save now, then track progress, notes, and citations inside your private research library.
+                                  </p>
                                 </form>
-                              </div>
+                              )
                             ) : (
-                              <form action={savePaperToLibraryAction} className="flex flex-wrap items-center gap-3">
-                                <input type="hidden" name="redirectTo" value="/papers" />
-                                <input type="hidden" name="arxivId" value={entry.arxivId} />
-                                <input type="hidden" name="title" value={entry.title} />
-                                <input type="hidden" name="summary" value={entry.summary} />
-                                <input type="hidden" name="authors" value={JSON.stringify(entry.authors)} />
-                                <input type="hidden" name="paperUrl" value={entry.paperUrl} />
-                                <input type="hidden" name="pdfUrl" value={entry.pdfUrl ?? ""} />
-                                <input type="hidden" name="primaryCategory" value={entry.primaryCategory ?? ""} />
-                                <input type="hidden" name="topicName" value={entry.topic.name} />
-                                <input type="hidden" name="digestDate" value={entry.digestDate.toISOString()} />
-                                <button type="submit" className="btn-primary">
-                                  Save to Library
-                                </button>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <Link href="/login?next=/papers/library" className="btn-primary">
+                                  Sign In to Save
+                                </Link>
                                 <p className="text-sm leading-7 text-[var(--ink-soft)]">
-                                  Save now, then track reading state and write annotations in your private library.
+                                  Signing in unlocks a personal queue, reading progress, annotations, and citation export.
                                 </p>
-                              </form>
-                            )
-                          ) : (
-                            <div className="flex flex-wrap items-center gap-3">
-                              <Link href="/login?next=/papers/library" className="btn-primary">
-                                Sign In to Save
-                              </Link>
-                              <p className="text-sm leading-7 text-[var(--ink-soft)]">
-                                Signing in unlocks a personal paper queue, reading-state tracking, and annotations.
-                              </p>
-                            </div>
-                          )}
+                              </div>
+                            )}
+                          </div>
+
+                          <CitationPanel
+                            citation={citation}
+                            bibtex={bibtex}
+                            title="Paper citation"
+                            description="Copy a quick reference or BibTeX entry for this paper before it moves into a note, digest, or reading log."
+                          />
                         </div>
                       </article>
                     );
@@ -232,9 +265,9 @@ export default async function PapersPage({
               <Microscope className="h-5 w-5" />
             </div>
             <div className="space-y-3">
-              <h2 className="font-serif text-2xl font-semibold tracking-tight">每日抓取arxiv相关关键词论文</h2>
+              <h2 className="font-serif text-2xl font-semibold tracking-tight">Why this stream matters</h2>
               <p className="text-sm leading-8 text-[var(--ink-soft)]">
-                长文写作和笔记可以沉淀思考，而论文流则让研究输入保持新鲜。
+                Long-form writing and evergreen notes are downstream artifacts. The paper stream keeps fresh inputs visible so they can be promoted into annotations, notes, digests, and eventually essays.
               </p>
             </div>
           </div>

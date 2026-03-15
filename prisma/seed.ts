@@ -27,6 +27,9 @@ async function main() {
       name: adminName,
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: false,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -38,6 +41,9 @@ async function main() {
       email: adminEmail,
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: false,
       passwordHash: await hash(adminPassword, 12),
     },
   });
@@ -47,6 +53,9 @@ async function main() {
     update: {
       name: "读者评论",
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: true,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -58,6 +67,9 @@ async function main() {
       email: "2643233154@qq.com",
       role: UserRole.READER,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: true,
       passwordHash: await hash("ReaderDemo123!", 12),
     },
   });
@@ -83,6 +95,8 @@ async function main() {
       scholarUrl: "https://scholar.google.com",
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
+      backgroundImageUrl: "",
+      assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",
         "Knowledge workflows",
@@ -120,6 +134,8 @@ async function main() {
       scholarUrl: "https://scholar.google.com",
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
+      backgroundImageUrl: "",
+      assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",
         "Knowledge workflows",
@@ -148,6 +164,7 @@ async function main() {
       category: "AI Engineering",
       tags: ["AI", "Workflow", "Reliability"],
       status: "PUBLISHED",
+      pinned: false,
       featured: true,
       readTimeMinutes: 6,
       publishedAt: new Date("2026-03-01T08:30:00.000Z"),
@@ -163,6 +180,7 @@ async function main() {
       category: "AI Engineering",
       tags: ["AI", "Workflow", "Reliability"],
       status: "PUBLISHED",
+      pinned: false,
       featured: true,
       readTimeMinutes: 6,
       publishedAt: new Date("2026-03-01T08:30:00.000Z"),
@@ -181,6 +199,7 @@ async function main() {
       category: "Engineering Practice",
       tags: ["Blog", "Architecture", "Product"],
       status: "PUBLISHED",
+      pinned: true,
       featured: false,
       readTimeMinutes: 5,
       publishedAt: new Date("2026-03-07T09:00:00.000Z"),
@@ -196,9 +215,45 @@ async function main() {
       category: "Engineering Practice",
       tags: ["Blog", "Architecture", "Product"],
       status: "PUBLISHED",
+      pinned: true,
       featured: false,
       readTimeMinutes: 5,
       publishedAt: new Date("2026-03-07T09:00:00.000Z"),
+      authorId: admin.id,
+    },
+  });
+
+  await prisma.post.upsert({
+    where: { slug: "making-internal-ai-tools-legible" },
+    update: {
+      title: "Making Internal AI Tools Legible to the Teams Who Use Them",
+      excerpt:
+        "Transparent states, sensible checkpoints, and audit-friendly outputs help internal AI tools earn real trust from the people using them every day.",
+      content:
+        "## Legibility matters\n\nInternal AI tools fail when only their builders understand how they work. Teams trust systems that expose enough state to inspect decisions, validate source material, and recover from drift.\n\n## Practical ways to make systems legible\n\n- Show the retrieved evidence before a final answer.\n- Keep explicit handoff checkpoints in high-cost workflows.\n- Record enough operational detail for debugging and review.\n\n## Why this improves adoption\n\nTrust grows when systems can be questioned. That makes transparency a product feature, not just an engineering nicety.",
+      category: "AI Engineering",
+      tags: ["AI", "Reliability", "Operations"],
+      status: "PUBLISHED",
+      pinned: false,
+      featured: false,
+      readTimeMinutes: 4,
+      publishedAt: new Date("2026-03-12T07:45:00.000Z"),
+      authorId: admin.id,
+    },
+    create: {
+      title: "Making Internal AI Tools Legible to the Teams Who Use Them",
+      slug: "making-internal-ai-tools-legible",
+      excerpt:
+        "Transparent states, sensible checkpoints, and audit-friendly outputs help internal AI tools earn real trust from the people using them every day.",
+      content:
+        "## Legibility matters\n\nInternal AI tools fail when only their builders understand how they work. Teams trust systems that expose enough state to inspect decisions, validate source material, and recover from drift.\n\n## Practical ways to make systems legible\n\n- Show the retrieved evidence before a final answer.\n- Keep explicit handoff checkpoints in high-cost workflows.\n- Record enough operational detail for debugging and review.\n\n## Why this improves adoption\n\nTrust grows when systems can be questioned. That makes transparency a product feature, not just an engineering nicety.",
+      category: "AI Engineering",
+      tags: ["AI", "Reliability", "Operations"],
+      status: "PUBLISHED",
+      pinned: false,
+      featured: false,
+      readTimeMinutes: 4,
+      publishedAt: new Date("2026-03-12T07:45:00.000Z"),
       authorId: admin.id,
     },
   });
@@ -317,23 +372,25 @@ async function main() {
 
   await prisma.comment.deleteMany({ where: { postId: firstPost.id } });
 
-  await prisma.comment.createMany({
-    data: [
-      {
-        postId: firstPost.id,
-        authorId: reader.id,
-        status: "APPROVED",
-        content:
-          "AI运行过程中的中间状态特别有用，它使得AI的工作流程变得可观察、可检查，而不像是一个神秘的“黑箱”",
-      },
-      {
-        postId: firstPost.id,
-        authorId: admin.id,
-        status: "APPROVED",
-        content:
-          "这正是我们的目标。未来的每一个工具都应该提供充分的上下文信息，让读者能够核查整个过程。",
-      },
-    ],
+  const seededTopLevelComment = await prisma.comment.create({
+    data: {
+      postId: firstPost.id,
+      authorId: reader.id,
+      status: "APPROVED",
+      content:
+        "AI运行过程中的中间状态特别有用，它使得AI的工作流程变得可观察、可检查，而不像是一个神秘的“黑箱”",
+    },
+  });
+
+  await prisma.comment.create({
+    data: {
+      postId: firstPost.id,
+      authorId: admin.id,
+      parentId: seededTopLevelComment.id,
+      status: "APPROVED",
+      content:
+        "这正是我们的目标。未来的每一个工具都应该提供充分的上下文信息，让读者能够核查整个过程。",
+    },
   });
 
   await prisma.llmProvider.upsert({

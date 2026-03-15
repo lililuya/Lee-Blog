@@ -10,6 +10,7 @@ export const paperReadingStatusOptions = [
 export const paperLibraryNoticeMap: Record<string, string> = {
   saved: "Paper saved to your research library.",
   updated: "Reading status updated.",
+  progress: "Reading progress synced.",
   removed: "Paper removed from your research library.",
   annotated: "Annotation saved.",
   "annotation-deleted": "Annotation removed.",

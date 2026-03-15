@@ -1,10 +1,6 @@
 import { ProviderAdapter } from "@prisma/client";
 import { getChatProviderBySlug } from "@/lib/queries";
-
-export type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
+import type { ChatMessage } from "@/lib/chat/message";
 
 export type ChatCompletionOptions = {
   messages: ChatMessage[];
@@ -12,6 +8,98 @@ export type ChatCompletionOptions = {
   temperature?: number;
   maxTokens?: number;
 };
+
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+
+  if (!match) {
+    throw new Error("Image attachments must use a base64 data URL.");
+  }
+
+  return {
+    mimeType: match[1],
+    base64: match[2],
+  };
+}
+
+function buildOpenAiCompatibleContent(message: ChatMessage) {
+  if (!message.attachments?.length) {
+    return message.content;
+  }
+
+  const parts: Array<
+    | {
+        type: "text";
+        text: string;
+      }
+    | {
+        type: "image_url";
+        image_url: {
+          url: string;
+          detail: "auto";
+        };
+      }
+  > = [];
+
+  if (message.content.trim()) {
+    parts.push({ type: "text", text: message.content });
+  }
+
+  for (const attachment of message.attachments) {
+    if (attachment.kind !== "image") {
+      continue;
+    }
+
+    parts.push({
+      type: "image_url",
+      image_url: {
+        url: attachment.dataUrl,
+        detail: "auto",
+      },
+    });
+  }
+
+  return parts.length === 1 && parts[0].type === "text" ? parts[0].text : parts;
+}
+
+function buildAnthropicContent(message: ChatMessage) {
+  const parts: Array<
+    | {
+        type: "text";
+        text: string;
+      }
+    | {
+        type: "image";
+        source: {
+          type: "base64";
+          media_type: string;
+          data: string;
+        };
+      }
+  > = [];
+
+  if (message.content.trim()) {
+    parts.push({ type: "text", text: message.content });
+  }
+
+  for (const attachment of message.attachments ?? []) {
+    if (attachment.kind !== "image") {
+      continue;
+    }
+
+    const parsed = parseDataUrl(attachment.dataUrl);
+    parts.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: parsed.mimeType,
+        data: parsed.base64,
+      },
+    });
+  }
+
+  return parts.length === 0 ? message.content : parts;
+}
 
 export async function requestChatCompletion(providerSlug: string, options: ChatCompletionOptions) {
   const provider = await getChatProviderBySlug(providerSlug);
@@ -42,7 +130,10 @@ export async function requestChatCompletion(providerSlug: string, options: ChatC
         model: provider.model,
         messages: [
           ...(mergedSystemPrompt ? [{ role: "system", content: mergedSystemPrompt }] : []),
-          ...options.messages,
+          ...options.messages.map((message) => ({
+            role: message.role,
+            content: buildOpenAiCompatibleContent(message),
+          })),
         ],
         temperature: options.temperature ?? 0.35,
         max_tokens: options.maxTokens ?? 1024,
@@ -71,7 +162,12 @@ export async function requestChatCompletion(providerSlug: string, options: ChatC
         model: provider.model,
         system: systemMessage,
         max_tokens: options.maxTokens ?? 1024,
-        messages: options.messages.filter((message) => message.role !== "system"),
+        messages: options.messages
+          .filter((message) => message.role !== "system")
+          .map((message) => ({
+            role: message.role,
+            content: buildAnthropicContent(message),
+          })),
       }),
     });
 

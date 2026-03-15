@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Plus, SquarePen } from "lucide-react";
+import { Pin, Plus, Sparkles, SquarePen } from "lucide-react";
 import { getAdminPosts } from "@/lib/queries";
+import { isLivePublishedAt } from "@/lib/content-visibility";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -34,24 +35,60 @@ export default async function AdminPostsPage() {
             </tr>
           </thead>
           <tbody>
-            {posts.map((post) => (
-              <tr key={post.id} className="border-t border-black/6">
-                <td className="px-6 py-4">
-                  <div className="font-semibold text-[var(--ink)]">{post.title}</div>
-                  <div className="text-xs text-[var(--ink-soft)]">/{post.slug}</div>
-                </td>
-                <td className="px-6 py-4 text-[var(--ink-soft)]">{post.status}</td>
-                <td className="px-6 py-4 text-[var(--ink-soft)]">{post.category}</td>
-                <td className="px-6 py-4 text-[var(--ink-soft)]">{post._count.comments}</td>
-                <td className="px-6 py-4 text-[var(--ink-soft)]">{formatDate(post.updatedAt, "yyyy-MM-dd HH:mm")}</td>
-                <td className="px-6 py-4">
-                  <Link href={`/admin/posts/${post.id}`} className="inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)]">
-                    <SquarePen className="h-4 w-4" />
-                    Edit
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {posts.map((post) => {
+              const isScheduled =
+                post.status === "PUBLISHED" &&
+                post.publishedAt &&
+                !isLivePublishedAt(post.publishedAt);
+
+              return (
+                <tr key={post.id} className="border-t border-black/6">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-semibold text-[var(--ink)]">{post.title}</div>
+                      {post.pinned ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(168,123,53,0.14)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--gold)]">
+                          <Pin className="h-3 w-3" />
+                          Pinned
+                        </span>
+                      ) : null}
+                      {post.featured ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(27,107,99,0.1)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--accent-strong)]">
+                          <Sparkles className="h-3 w-3" />
+                          Featured
+                        </span>
+                      ) : null}
+                      {isScheduled ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(20,33,43,0.08)] px-2.5 py-1 text-[0.7rem] font-semibold text-[var(--ink-soft)]">
+                          Scheduled
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="text-xs text-[var(--ink-soft)]">/{post.slug}</div>
+                    {post.publishedAt ? (
+                      <div className="mt-1 text-xs text-[var(--ink-soft)]">
+                        Publish at: {formatDate(post.publishedAt, "yyyy-MM-dd HH:mm")}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-6 py-4 text-[var(--ink-soft)]">{post.status}</td>
+                  <td className="px-6 py-4 text-[var(--ink-soft)]">{post.category}</td>
+                  <td className="px-6 py-4 text-[var(--ink-soft)]">{post._count.comments}</td>
+                  <td className="px-6 py-4 text-[var(--ink-soft)]">
+                    {formatDate(post.updatedAt, "yyyy-MM-dd HH:mm")}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link
+                      href={`/admin/posts/${post.id}`}
+                      className="inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)]"
+                    >
+                      <SquarePen className="h-4 w-4" />
+                      Edit
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -1,5 +1,5 @@
 import type { CurrentUser } from "@/lib/auth";
-import type { ChatMessage } from "@/lib/llm";
+import type { ChatMessage } from "@/lib/chat/message";
 
 export type ChatCitation = {
   id: string;
@@ -9,6 +9,11 @@ export type ChatCitation = {
   snippet: string;
   visibility: "public" | "private";
   isCurrentPage: boolean;
+};
+
+export type RetrievedChatSource = ChatCitation & {
+  score: number;
+  content: string;
 };
 
 export type ChatReply = {

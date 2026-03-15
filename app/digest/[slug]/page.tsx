@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarRange, Clock3, FileStack, FileText } from "lucide-react";
+import { ArrowLeft, CalendarRange, Clock3, FileStack, FileText, Layers3 } from "lucide-react";
+import { CitationPanel } from "@/components/site/citation-panel";
 import { Markdown } from "@/components/site/markdown";
-import { ReadingProgress } from "@/components/site/reading-progress";
-import { getWeeklyDigestBySlug } from "@/lib/queries";
+import { ContentSeriesNav } from "@/components/site/series-nav";
+import { buildDigestBibtex, buildDigestCitation } from "@/lib/citations";
+import { getSeriesNavigation, getWeeklyDigestBySlug } from "@/lib/queries";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +23,28 @@ export default async function WeeklyDigestDetailPage({
   }
 
   const contentStats = getContentStats(digest.content);
+  const citation = buildDigestCitation({
+    title: digest.title,
+    slug: digest.slug,
+    publishedAt: digest.publishedAt,
+    periodStart: digest.periodStart,
+    periodEnd: digest.periodEnd,
+  });
+  const bibtex = buildDigestBibtex({
+    title: digest.title,
+    slug: digest.slug,
+    publishedAt: digest.publishedAt,
+    periodStart: digest.periodStart,
+    periodEnd: digest.periodEnd,
+  });
+  const seriesNavigation = await getSeriesNavigation({
+    seriesId: digest.seriesId,
+    contentId: digest.id,
+    type: "DIGEST",
+  });
 
   return (
     <div className="container-shell py-12 md:py-16">
-      <ReadingProgress targetId="digest-content" label={`Reading progress for ${digest.title}`} />
-
       <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
         <Link href="/digest" className="btn-ghost inline-flex items-center gap-2 px-0 text-[var(--accent-strong)]">
           <ArrowLeft className="h-4 w-4" />
@@ -52,6 +71,15 @@ export default async function WeeklyDigestDetailPage({
               <FileText className="h-4 w-4" />
               {contentStats.characterCount.toLocaleString()} chars
             </span>
+            {digest.series ? (
+              <Link
+                href={`/series/${digest.series.slug}`}
+                className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-white/70 px-3 py-1 font-semibold text-[var(--accent-strong)]"
+              >
+                <Layers3 className="h-3.5 w-3.5" />
+                {digest.series.title}
+              </Link>
+            ) : null}
           </div>
           <h1 className="mt-6 max-w-4xl font-serif text-[clamp(2.6rem,5vw,4.8rem)] font-semibold leading-[0.96] tracking-[-0.05em]">
             {digest.title}
@@ -95,6 +123,22 @@ export default async function WeeklyDigestDetailPage({
           </div>
           <Markdown content={digest.content} />
         </section>
+
+        <CitationPanel
+          citation={citation}
+          bibtex={bibtex}
+          title="Digest citation"
+          description="Copy a shareable reference or a BibTeX entry when this digest becomes part of a paper trail, reading log, or literature review."
+        />
+
+        {seriesNavigation ? (
+          <ContentSeriesNav
+            series={seriesNavigation.series}
+            currentIndex={seriesNavigation.currentIndex}
+            previous={seriesNavigation.previous}
+            next={seriesNavigation.next}
+          />
+        ) : null}
       </article>
     </div>
   );

@@ -15,6 +15,7 @@ function buildRagSystemPrompt(context: Awaited<ReturnType<typeof retrieveChatCon
     "If the retrieved context is insufficient, say what is grounded and what is only your general reasoning.",
     "Do not invent quotes, citations, paper claims, or personal facts that are not supported by the retrieved context.",
     "When the user is reading a page, prioritize that current-page context before broader site knowledge.",
+    "If a source is marked as current page context, never say that you cannot access or see the current page. Treat that content as already provided in the prompt.",
   ].join("\n");
 
   if (context.sources.length === 0) {
@@ -47,15 +48,17 @@ function buildRagSystemPrompt(context: Awaited<ReturnType<typeof retrieveChatCon
 export async function generateChatReply(input: ChatOrchestratorInput): Promise<ChatReply> {
   const retrievalQuery = buildRetrievalQuery(input.messages);
 
-  if (!retrievalQuery) {
-    throw new Error("The chat request did not include a user message.");
-  }
-
-  const context = await retrieveChatContext({
-    query: retrievalQuery,
-    pathname: input.pathname,
-    currentUser: input.currentUser,
-  });
+  const context = retrievalQuery
+    ? await retrieveChatContext({
+        query: retrievalQuery,
+        pathname: input.pathname,
+        currentUser: input.currentUser,
+      })
+    : {
+        query: "",
+        sources: [],
+        usedPageContext: false,
+      };
 
   const content = await requestChatCompletion(input.providerSlug, {
     messages: input.messages,

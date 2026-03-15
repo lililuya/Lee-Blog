@@ -5,6 +5,7 @@ import { UserRole, UserStatus } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { TWO_FACTOR_CHALLENGE_COOKIE_NAME } from "@/lib/two-factor";
 import { isDatabaseConfigured } from "@/lib/utils";
 
 export const SESSION_COOKIE_NAME = "scholar_blog_session";
@@ -14,8 +15,12 @@ export type CurrentUser = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: UserRole;
   status: UserStatus;
+  emailVerifiedAt: Date | null;
+  emailVerificationRequired: boolean;
+  emailPostNotifications: boolean;
   mutedUntil: Date | null;
   muteReason: string | null;
 } | null;
@@ -52,6 +57,11 @@ export async function createSessionForUser(userId: string) {
     path: "/",
     expires: expiresAt,
   });
+}
+
+export async function getCurrentSessionToken() {
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
@@ -91,8 +101,12 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
+    avatarUrl: session.user.avatarUrl,
     role: session.user.role,
     status: session.user.status,
+    emailVerifiedAt: session.user.emailVerifiedAt,
+    emailVerificationRequired: session.user.emailVerificationRequired,
+    emailPostNotifications: session.user.emailPostNotifications,
     mutedUntil: session.user.mutedUntil,
     muteReason: session.user.muteReason,
   };
@@ -111,6 +125,33 @@ export async function destroyCurrentSession() {
   }
 
   cookieStore.delete(SESSION_COOKIE_NAME);
+  cookieStore.delete(TWO_FACTOR_CHALLENGE_COOKIE_NAME);
+}
+
+export async function destroyAllSessionsForUser(userId: string) {
+  if (!isDatabaseConfigured()) {
+    return;
+  }
+
+  await prisma.session.deleteMany({ where: { userId } });
+}
+
+export async function destroyOtherSessionsForUser(userId: string, currentSessionToken: string | null) {
+  if (!isDatabaseConfigured()) {
+    return;
+  }
+
+  if (!currentSessionToken) {
+    await prisma.session.deleteMany({ where: { userId } });
+    return;
+  }
+
+  await prisma.session.deleteMany({
+    where: {
+      userId,
+      sessionToken: { not: currentSessionToken },
+    },
+  });
 }
 
 export async function requireUser() {

@@ -1,9 +1,15 @@
 import { PostStatus } from "@prisma/client";
+import { DraftAutosave } from "@/components/forms/draft-autosave";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 type PostFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  seriesOptions?: Array<{
+    id: string;
+    title: string;
+    featured?: boolean;
+  }>;
   post?: {
     id: string;
     title: string;
@@ -13,11 +19,30 @@ type PostFormProps = {
     category: string;
     tags: string[];
     status: PostStatus;
+    pinned: boolean;
     featured: boolean;
     coverImageUrl: string | null;
+    seriesId?: string | null;
+    seriesOrder?: number | null;
     publishedAt: Date | null;
   } | null;
 };
+
+const POST_DRAFT_FIELDS = [
+  "title",
+  "slug",
+  "excerpt",
+  "content",
+  "category",
+  "tags",
+  "status",
+  "publishedAt",
+  "coverImageUrl",
+  "seriesId",
+  "seriesOrder",
+  "pinned",
+  "featured",
+];
 
 function toDateTimeLocalString(date: Date | null | undefined) {
   if (!date) {
@@ -30,56 +55,177 @@ function toDateTimeLocalString(date: Date | null | undefined) {
     .slice(0, 16);
 }
 
-export function PostForm({ action, submitLabel, post }: PostFormProps) {
+export function PostForm({ action, submitLabel, seriesOptions = [], post }: PostFormProps) {
+  const formId = post ? `post-form-${post.id}` : "post-form-new";
+  const storageKey = post ? `draft:post:${post.id}` : "draft:post:new";
+
   return (
-    <form action={action} className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
+    <form
+      id={formId}
+      action={action}
+      className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+    >
       {post ? <input type="hidden" name="postId" value={post.id} /> : null}
+
+      <DraftAutosave formId={formId} storageKey={storageKey} fields={POST_DRAFT_FIELDS} />
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">标题</span>
-          <input name="title" defaultValue={post?.title} required className="field" placeholder="例如：面向研究型博客的全栈内容系统设计" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Title</span>
+          <input
+            name="title"
+            defaultValue={post?.title}
+            required
+            className="field"
+            placeholder="For example: Building a reliable research blog workflow with LLM tooling"
+          />
         </label>
+
         <label className="space-y-2">
           <span className="text-sm font-semibold text-[var(--ink)]">Slug</span>
-          <input name="slug" defaultValue={post?.slug} className="field" placeholder="留空时将根据标题自动生成" />
+          <input
+            name="slug"
+            defaultValue={post?.slug}
+            className="field"
+            placeholder="Leave empty to generate from the title"
+          />
         </label>
+
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">分类</span>
-          <input name="category" defaultValue={post?.category} required className="field" placeholder="AI Engineering" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Category</span>
+          <input
+            name="category"
+            defaultValue={post?.category}
+            required
+            className="field"
+            placeholder="AI Engineering"
+          />
         </label>
+
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">摘要</span>
-          <textarea name="excerpt" defaultValue={post?.excerpt} required minLength={12} rows={4} className="field min-h-28 resize-y" placeholder="用 2-3 句话说明这篇文章的核心价值。" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Excerpt</span>
+          <textarea
+            name="excerpt"
+            defaultValue={post?.excerpt}
+            required
+            minLength={12}
+            rows={4}
+            className="field min-h-28 resize-y"
+            placeholder="Write a short summary explaining what this article is about and why it matters."
+          />
         </label>
+
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">正文（Markdown）</span>
-          <textarea name="content" defaultValue={post?.content} required minLength={32} rows={18} className="field min-h-72 resize-y font-mono text-sm" placeholder="# 标题\n\n在这里使用 Markdown 撰写正文。" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Body (Markdown)</span>
+          <textarea
+            name="content"
+            defaultValue={post?.content}
+            required
+            minLength={32}
+            rows={18}
+            className="field min-h-72 resize-y font-mono text-sm"
+            placeholder={"# Title\n\nWrite the full article in Markdown here."}
+          />
         </label>
+
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">标签（英文逗号分隔）</span>
-          <input name="tags" defaultValue={post?.tags.join(", ")} className="field" placeholder="AI, Workflow, Reliability" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Tags</span>
+          <input
+            name="tags"
+            defaultValue={post?.tags.join(", ")}
+            className="field"
+            placeholder="agent, workflow, reliability"
+          />
         </label>
+
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">状态</span>
-          <select name="status" className="field" defaultValue={post?.status ?? PostStatus.DRAFT}>
-            <option value={PostStatus.DRAFT}>草稿</option>
-            <option value={PostStatus.PUBLISHED}>已发布</option>
-            <option value={PostStatus.ARCHIVED}>已归档</option>
+          <span className="text-sm font-semibold text-[var(--ink)]">Status</span>
+          <select
+            name="status"
+            className="field"
+            defaultValue={post?.status ?? PostStatus.DRAFT}
+          >
+            <option value={PostStatus.DRAFT}>Draft</option>
+            <option value={PostStatus.PUBLISHED}>Published</option>
+            <option value={PostStatus.ARCHIVED}>Archived</option>
           </select>
         </label>
+
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">发布时间</span>
-          <input name="publishedAt" type="datetime-local" defaultValue={toDateTimeLocalString(post?.publishedAt)} className="field" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Published At</span>
+          <input
+            name="publishedAt"
+            type="datetime-local"
+            defaultValue={toDateTimeLocalString(post?.publishedAt)}
+            className="field"
+          />
         </label>
+
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-[var(--ink)]">Series</span>
+          <select name="seriesId" className="field" defaultValue={post?.seriesId ?? ""}>
+            <option value="">Standalone article</option>
+            {seriesOptions.map((series) => (
+              <option key={series.id} value={series.id}>
+                {series.featured ? "Featured · " : ""}
+                {series.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-sm font-semibold text-[var(--ink)]">Series Order</span>
+          <input
+            name="seriesOrder"
+            type="number"
+            min={1}
+            max={999}
+            defaultValue={post?.seriesOrder ?? ""}
+            className="field"
+            placeholder="1"
+          />
+        </label>
+
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">封面图 URL</span>
-          <input name="coverImageUrl" defaultValue={post?.coverImageUrl ?? ""} className="field" placeholder="https://images.example.com/cover.jpg" />
+          <span className="text-sm font-semibold text-[var(--ink)]">Cover Image URL</span>
+          <input
+            name="coverImageUrl"
+            defaultValue={post?.coverImageUrl ?? ""}
+            className="field"
+            placeholder="https://images.example.com/cover.jpg"
+          />
         </label>
       </div>
-      <label className="inline-flex items-center gap-3 rounded-full border border-black/8 bg-[rgba(27,107,99,0.05)] px-4 py-3 text-sm font-medium text-[var(--ink)]">
-        <input name="featured" type="checkbox" defaultChecked={post?.featured} className="h-4 w-4 accent-[var(--accent)]" />
-        设为首页精选文章
-      </label>
+
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <label className="inline-flex items-center gap-3 rounded-full border border-black/8 bg-[rgba(168,123,53,0.08)] px-4 py-3 text-sm font-medium text-[var(--ink)]">
+            <input
+              name="pinned"
+              type="checkbox"
+              defaultChecked={post?.pinned}
+              className="h-4 w-4 accent-[var(--gold)]"
+            />
+            Pin on homepage
+          </label>
+
+          <label className="inline-flex items-center gap-3 rounded-full border border-black/8 bg-[rgba(27,107,99,0.05)] px-4 py-3 text-sm font-medium text-[var(--ink)]">
+            <input
+              name="featured"
+              type="checkbox"
+              defaultChecked={post?.featured}
+              className="h-4 w-4 accent-[var(--accent)]"
+            />
+            Mark as featured
+          </label>
+        </div>
+
+        <p className="text-xs leading-6 text-[var(--ink-soft)]">
+          If a published post is pinned, older pinned posts are automatically unpinned. Series order is optional and only used when this article belongs to a series.
+        </p>
+      </div>
+
       <div className="flex items-center gap-3">
         <SubmitButton>{submitLabel}</SubmitButton>
       </div>
