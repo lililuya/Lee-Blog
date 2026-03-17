@@ -1,5 +1,6 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { ArrowUpRight, Clock3, FileText } from "lucide-react";
+import { TagLinkPill } from "@/components/site/tag-link-pill";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 type NoteCardProps = {
@@ -21,7 +22,9 @@ export function NoteCard({ note }: NoteCardProps) {
     <article className="glass-card group relative overflow-hidden rounded-[2rem] p-6 transition duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)]">
       <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,_transparent,_rgba(168,123,53,0.52),_transparent)] opacity-0 transition group-hover:opacity-100" />
       <div className="mb-5 flex items-center justify-between gap-4 text-sm text-[var(--ink-soft)]">
-        <span className="badge-soft bg-[rgba(168,123,53,0.12)] text-[var(--gold)]">{note.noteType ?? "Knowledge Note"}</span>
+        <span className="badge-soft bg-[rgba(168,123,53,0.12)] text-[var(--gold)]">
+          {note.noteType ?? "Knowledge Note"}
+        </span>
         <span>{formatDate(note.publishedAt)}</span>
       </div>
       <div className="space-y-4">
@@ -29,9 +32,7 @@ export function NoteCard({ note }: NoteCardProps) {
         <p className="line-clamp-3 text-sm leading-7 text-[var(--ink-soft)]">{note.summary}</p>
         <div className="flex flex-wrap gap-2">
           {note.tags.map((tag) => (
-            <span key={tag} className="rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-[var(--ink-soft)]">
-              #{tag}
-            </span>
+            <TagLinkPill key={tag} tag={tag} />
           ))}
         </div>
       </div>

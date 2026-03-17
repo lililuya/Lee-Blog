@@ -8,6 +8,10 @@ const THEME_EVENT_NAME = "scholar-theme-change";
 
 type ThemeMode = "light" | "dark";
 
+type ThemeToggleProps = {
+  variant?: "default" | "rail";
+};
+
 function applyTheme(theme: ThemeMode) {
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
@@ -32,13 +36,32 @@ function getServerSnapshot(): ThemeMode {
   return "light";
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const isDark = theme === "dark";
+  const title = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   function toggleTheme() {
     const nextTheme: ThemeMode = isDark ? "light" : "dark";
     applyTheme(nextTheme);
+  }
+
+  if (variant === "rail") {
+    return (
+      <button
+        type="button"
+        className="site-side-rail__tool"
+        onClick={toggleTheme}
+        aria-label={title}
+        aria-pressed={isDark}
+        title={title}
+      >
+        <span className="site-side-rail__tool-icon" aria-hidden="true">
+          {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+        </span>
+        <span className="site-side-rail__tool-label">{isDark ? "Light" : "Night"}</span>
+      </button>
+    );
   }
 
   return (
@@ -46,9 +69,9 @@ export function ThemeToggle() {
       type="button"
       className="theme-toggle"
       onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={title}
       aria-pressed={isDark}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={title}
     >
       <span className="theme-toggle__icon" aria-hidden="true">
         {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}

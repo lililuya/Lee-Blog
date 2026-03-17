@@ -14,6 +14,8 @@ export default async function BlogIndexPage() {
           kicker="Blog"
           title="Long-form writing"
           description="Use this space for complete essays, project retrospectives, research notes, and carefully structured technical posts. Every article supports comments, admin management, and a richer reading experience."
+          href="/categories"
+          linkLabel="Browse categories"
         />
         <div className="data-grid">
           {posts.map((post) => (

@@ -4,6 +4,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type ProviderFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   provider?: {
     id: string;
     name: string;
@@ -17,9 +18,13 @@ type ProviderFormProps = {
   } | null;
 };
 
-export function ProviderForm({ action, submitLabel, provider }: ProviderFormProps) {
+export function ProviderForm({ action, submitLabel, confirmMessage, provider }: ProviderFormProps) {
   return (
-    <form action={action} className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
+    <form
+      action={action}
+      data-confirm-message={confirmMessage}
+      className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+    >
       {provider ? <input type="hidden" name="providerId" value={provider.id} /> : null}
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2">

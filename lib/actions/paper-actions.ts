@@ -11,6 +11,7 @@ import {
   paperAnnotationDeleteSchema,
   paperAnnotationSchema,
   paperLibraryLifecycleSchema,
+  paperLibraryProgressSchema,
   paperLibrarySaveSchema,
   paperLibraryStatusSchema,
   paperTopicSchema,
@@ -201,6 +202,7 @@ export async function savePaperToLibraryAction(formData: FormData) {
     primaryCategory: getString(formData, "primaryCategory") || undefined,
     topicName: getString(formData, "topicName") || undefined,
     digestDate: getString(formData, "digestDate") || null,
+    publishedAt: getString(formData, "publishedAt") || null,
   });
 
   await prisma.paperLibraryItem.upsert({
@@ -219,6 +221,7 @@ export async function savePaperToLibraryAction(formData: FormData) {
       primaryCategory: parsed.primaryCategory ?? null,
       topicName: parsed.topicName ?? null,
       digestDate: parsed.digestDate ?? null,
+      publishedAt: parsed.publishedAt ?? null,
     },
     create: {
       userId: user.id,
@@ -231,6 +234,7 @@ export async function savePaperToLibraryAction(formData: FormData) {
       primaryCategory: parsed.primaryCategory ?? null,
       topicName: parsed.topicName ?? null,
       digestDate: parsed.digestDate ?? null,
+      publishedAt: parsed.publishedAt ?? null,
       status: PaperReadingStatus.TO_READ,
     },
   });
@@ -255,12 +259,54 @@ export async function updatePaperLibraryStatusAction(formData: FormData) {
 
   await prisma.paperLibraryItem.update({
     where: { id: item.id },
-    data: timestamps,
+    data: {
+      ...timestamps,
+      lastReadAt:
+        timestamps.status === PaperReadingStatus.READING ||
+        timestamps.status === PaperReadingStatus.COMPLETED
+          ? new Date()
+          : item.lastReadAt,
+    },
   });
 
   revalidatePath("/papers");
   revalidatePath("/papers/library");
   redirectWithFeedback(redirectTarget, "notice", "updated");
+}
+
+export async function updatePaperLibraryProgressAction(formData: FormData) {
+  const user = await requireUser();
+  ensureDatabase();
+
+  const redirectTarget = getRedirectTarget(formData, "/papers/library");
+  const parsed = paperLibraryProgressSchema.parse({
+    libraryItemId: getString(formData, "libraryItemId"),
+    progressPercent: getString(formData, "progressPercent"),
+  });
+
+  const item = await getLibraryItemForUser(parsed.libraryItemId, user.id, redirectTarget);
+  const nextStatus =
+    parsed.progressPercent >= 100
+      ? PaperReadingStatus.COMPLETED
+      : parsed.progressPercent > 0
+        ? item.status === PaperReadingStatus.ARCHIVED
+          ? PaperReadingStatus.ARCHIVED
+          : PaperReadingStatus.READING
+        : item.status;
+  const timestamps = buildStatusTimestamps(nextStatus, item);
+
+  await prisma.paperLibraryItem.update({
+    where: { id: item.id },
+    data: {
+      ...timestamps,
+      progressPercent: parsed.progressPercent,
+      lastReadAt: parsed.progressPercent > 0 ? new Date() : item.lastReadAt,
+    },
+  });
+
+  revalidatePath("/papers");
+  revalidatePath("/papers/library");
+  redirectWithFeedback(redirectTarget, "notice", "progress");
 }
 
 export async function removePaperFromLibraryAction(formData: FormData) {

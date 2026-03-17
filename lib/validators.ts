@@ -1,4 +1,4 @@
-﻿import {
+import {
   CommentStatus,
   JournalStatus,
   PaperReadingStatus,
@@ -10,16 +10,65 @@
 import { z } from "zod";
 
 const urlField = z.union([z.string().url(), z.literal(""), z.null()]).optional();
+const urlOrRootRelativeField = z
+  .union([z.string().url(), z.string().regex(/^\/[^\s]*$/), z.literal(""), z.null()])
+  .optional();
+const requiredUrlOrRootRelativeField = z.union([
+  z.string().url(),
+  z.string().regex(/^\/[^\s]*$/),
+]);
+const passwordField = z.string().min(8).max(100);
+const commentModerationRuleModeSchema = z.enum(["ALLOW", "BLOCK"]);
+const commentModerationRuleSeveritySchema = z.enum(["REVIEW", "REJECT"]);
 
 export const loginSchema = z.object({
   email: z.email(),
-  password: z.string().min(8),
+  password: passwordField,
 });
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(60),
   email: z.email(),
-  password: z.string().min(8).max(100),
+  password: passwordField,
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.email(),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().trim().min(1),
+    password: passwordField,
+    confirmPassword: passwordField,
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: passwordField,
+    newPassword: passwordField,
+    confirmPassword: passwordField,
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
+
+export const twoFactorTokenSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(6)
+    .max(32)
+    .regex(/^[A-Za-z0-9\s-]+$/, "Invalid authentication code."),
+});
+
+export const disableTwoFactorSchema = z.object({
+  currentPassword: passwordField,
 });
 
 export const postSchema = z.object({
@@ -30,8 +79,11 @@ export const postSchema = z.object({
   category: z.string().trim().min(2).max(60),
   tags: z.array(z.string()).max(12),
   status: z.nativeEnum(PostStatus),
+  pinned: z.boolean(),
   featured: z.boolean(),
   coverImageUrl: urlField,
+  seriesId: z.union([z.string().trim().min(1), z.literal(""), z.null()]).optional(),
+  seriesOrder: z.union([z.coerce.number().int().min(1).max(999), z.null()]).optional(),
   publishedAt: z.union([z.coerce.date(), z.null()]),
 });
 
@@ -44,7 +96,41 @@ export const noteSchema = z.object({
   tags: z.array(z.string()).max(12),
   status: z.nativeEnum(PostStatus),
   featured: z.boolean(),
+  seriesId: z.union([z.string().trim().min(1), z.literal(""), z.null()]).optional(),
+  seriesOrder: z.union([z.coerce.number().int().min(1).max(999), z.null()]).optional(),
   publishedAt: z.union([z.coerce.date(), z.null()]),
+});
+
+export const galleryImageSchema = z.object({
+  imageUrl: requiredUrlOrRootRelativeField,
+  thumbUrl: urlOrRootRelativeField,
+  alt: z.string().trim(),
+  caption: z.string().trim().optional(),
+  width: z.union([z.coerce.number().int().min(1).max(12000), z.null()]).optional(),
+  height: z.union([z.coerce.number().int().min(1).max(12000), z.null()]).optional(),
+  shotAt: z.union([z.coerce.date(), z.null()]).optional(),
+});
+
+export const gallerySchema = z.object({
+  title: z.string().trim(),
+  slug: z.string().trim(),
+  summary: z.string().trim(),
+  description: z.string().trim(),
+  coverImageUrl: urlOrRootRelativeField,
+  tags: z.array(z.string()),
+  status: z.nativeEnum(PostStatus),
+  featured: z.boolean(),
+  publishedAt: z.union([z.coerce.date(), z.null()]),
+  images: z.array(galleryImageSchema).min(1, "At least one image is required."),
+});
+
+export const contentSeriesSchema = z.object({
+  title: z.string().trim().min(2).max(160),
+  slug: z.string().trim().min(2).max(180),
+  summary: z.string().trim().min(12).max(320),
+  description: z.string().trim().min(24),
+  coverImageUrl: urlOrRootRelativeField,
+  featured: z.boolean(),
 });
 
 export const journalSchema = z.object({
@@ -62,7 +148,7 @@ export const profileSchema = z.object({
   headline: z.string().trim().min(8).max(160),
   tagline: z.string().trim().min(12).max(220),
   shortBio: z.string().trim().min(24),
-  longBio: z.string().trim().min(60),
+  longBio: z.string().trim().max(12000),
   institution: z.string().trim().max(120).optional(),
   department: z.string().trim().max(120).optional(),
   location: z.string().trim().max(120).optional(),
@@ -72,7 +158,12 @@ export const profileSchema = z.object({
   linkedinUrl: urlField,
   scholarUrl: urlField,
   cvUrl: urlField,
-  heroImageUrl: urlField,
+  heroImageUrl: urlOrRootRelativeField,
+  backgroundImageUrl: urlOrRootRelativeField,
+  backgroundVideoUrl: urlOrRootRelativeField,
+  backgroundMediaMode: z.enum(["IMAGE", "VIDEO"]),
+  backgroundOverlayOpacity: z.coerce.number().int().min(0).max(100),
+  assistantAvatarUrl: urlOrRootRelativeField,
   researchAreas: z.array(z.string()).max(12),
   educationMarkdown: z.string().trim().min(8),
   experienceMarkdown: z.string().trim().min(8),
@@ -82,6 +173,7 @@ export const profileSchema = z.object({
 
 export const commentSchema = z.object({
   postId: z.string().trim().min(1),
+  parentId: z.string().trim().min(1).optional().nullable(),
   content: z.string().trim().min(6).max(1200),
 });
 
@@ -115,11 +207,17 @@ export const paperLibrarySaveSchema = z.object({
   primaryCategory: z.string().trim().max(80).optional(),
   topicName: z.string().trim().max(120).optional(),
   digestDate: z.union([z.coerce.date(), z.null()]).optional(),
+  publishedAt: z.union([z.coerce.date(), z.null()]).optional(),
 });
 
 export const paperLibraryStatusSchema = z.object({
   libraryItemId: z.string().trim().min(1),
   status: z.nativeEnum(PaperReadingStatus),
+});
+
+export const paperLibraryProgressSchema = z.object({
+  libraryItemId: z.string().trim().min(1),
+  progressPercent: z.coerce.number().int().min(0).max(100),
 });
 
 export const paperAnnotationSchema = z.object({
@@ -139,6 +237,52 @@ export const paperLibraryLifecycleSchema = z.object({
 export const commentDecisionSchema = z.object({
   commentId: z.string().trim().min(1),
   status: z.nativeEnum(CommentStatus),
+});
+
+export const commentDeleteSchema = z.object({
+  commentId: z.string().trim().min(1),
+});
+
+export const galleryDeleteSchema = z.object({
+  galleryId: z.string().trim().min(1),
+});
+
+export const notificationActionSchema = z.object({
+  notificationId: z.string().trim().min(1),
+});
+
+export const commentNotificationSettingsSchema = z.object({
+  emailCommentNotifications: z.boolean(),
+  inAppCommentNotifications: z.boolean(),
+});
+
+export const commentModerationRuleSchema = z.object({
+  ruleId: z.string().trim().min(1).optional(),
+  term: z.string().trim().min(1).max(120),
+  mode: commentModerationRuleModeSchema,
+  severity: commentModerationRuleSeveritySchema,
+  enabled: z.boolean(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export const commentModerationRuleDeleteSchema = z.object({
+  ruleId: z.string().trim().min(1),
+});
+
+export const postRevisionRestoreSchema = z.object({
+  postId: z.string().trim().min(1),
+  revisionId: z.string().trim().min(1),
+});
+
+export const noteRevisionRestoreSchema = z.object({
+  noteId: z.string().trim().min(1),
+  revisionId: z.string().trim().min(1),
+});
+
+export const digestSeriesAssignmentSchema = z.object({
+  digestId: z.string().trim().min(1),
+  seriesId: z.union([z.string().trim().min(1), z.literal(""), z.null()]).optional(),
+  seriesOrder: z.union([z.coerce.number().int().min(1).max(999), z.null()]).optional(),
 });
 
 export const userMuteSchema = z.object({

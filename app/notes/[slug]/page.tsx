@@ -1,9 +1,10 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock3, FileText, UserRound } from "lucide-react";
+import { ArrowLeft, Clock3, FileText, Layers3, Network, UserRound } from "lucide-react";
 import { Markdown } from "@/components/site/markdown";
-import { ReadingProgress } from "@/components/site/reading-progress";
-import { getNoteBySlug } from "@/lib/queries";
+import { ContentSeriesNav } from "@/components/site/series-nav";
+import { TagLinkPill } from "@/components/site/tag-link-pill";
+import { getNoteBacklinks, getNoteBySlug, getSeriesNavigation } from "@/lib/queries";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +22,15 @@ export default async function NoteDetailPage({
   }
 
   const contentStats = getContentStats(note.content);
+  const seriesNavigation = await getSeriesNavigation({
+    seriesId: note.seriesId,
+    contentId: note.id,
+    type: "NOTE",
+  });
+  const backlinks = await getNoteBacklinks(note.slug);
 
   return (
     <div className="container-shell py-12 md:py-16">
-      <ReadingProgress targetId="note-content" label={`Reading progress for ${note.title}`} />
-
       <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
         <Link href="/notes" className="btn-ghost inline-flex items-center gap-2 px-0 text-[var(--accent-strong)]">
           <ArrowLeft className="h-4 w-4" />
@@ -39,17 +44,28 @@ export default async function NoteDetailPage({
       <article className="space-y-10">
         <header className="glass-card rounded-[2.4rem] p-8 md:p-10">
           <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
-            <span className="badge-soft bg-[rgba(168,123,53,0.12)] text-[var(--gold)]">{note.noteType ?? "Knowledge Note"}</span>
+            <span className="badge-soft bg-[rgba(168,123,53,0.12)] text-[var(--gold)]">
+              {note.noteType ?? "Knowledge Note"}
+            </span>
             <span className="inline-flex items-center gap-2">
               <Clock3 className="h-4 w-4" />
               {contentStats.estimatedMinutes} min read
             </span>
-            <span className="inline-flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              {contentStats.characterCount.toLocaleString()} chars
-            </span>
-            <span>{formatDate(note.publishedAt)}</span>
-          </div>
+              <span className="inline-flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                {contentStats.characterCount.toLocaleString()} chars
+              </span>
+              <span>{formatDate(note.publishedAt)}</span>
+              {note.series ? (
+                <Link
+                  href={`/series/${note.series.slug}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-black/8 bg-white/70 px-3 py-1 font-semibold text-[var(--accent-strong)]"
+                >
+                  <Layers3 className="h-3.5 w-3.5" />
+                  {note.series.title}
+                </Link>
+              ) : null}
+            </div>
           <h1 className="mt-6 max-w-4xl font-serif text-[clamp(2.6rem,5vw,4.8rem)] font-semibold leading-[0.96] tracking-[-0.05em]">
             {note.title}
           </h1>
@@ -63,9 +79,7 @@ export default async function NoteDetailPage({
           </div>
           <div className="mt-8 flex flex-wrap gap-2">
             {note.tags.map((tag) => (
-              <span key={tag} className="rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-[var(--ink-soft)]">
-                #{tag}
-              </span>
+              <TagLinkPill key={tag} tag={tag} />
             ))}
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -92,6 +106,48 @@ export default async function NoteDetailPage({
           </div>
           <Markdown content={note.content} />
         </section>
+
+        {backlinks.length > 0 ? (
+          <section className="space-y-5 rounded-[2rem] border border-black/8 bg-white/76 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)]">
+                <Network className="h-4 w-4" />
+                Knowledge network
+              </div>
+              <h2 className="font-serif text-3xl font-semibold tracking-tight">Referenced in other writing</h2>
+              <p className="max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">
+                This note is already cited by other public entries, which makes it easier to follow how one idea propagates across essays, digests, and working notes.
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {backlinks.map((backlink) => (
+                <Link
+                  key={`${backlink.kindLabel}-${backlink.id}`}
+                  href={backlink.href}
+                  className="group rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.84)] p-5 transition duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)]"
+                >
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
+                    <span className="badge-soft bg-[rgba(20,33,43,0.05)] text-[var(--ink)]">
+                      {backlink.kindLabel}
+                    </span>
+                    <span>{formatDate(backlink.publishedAt, "yyyy-MM-dd")}</span>
+                  </div>
+                  <h3 className="mt-4 font-serif text-2xl font-semibold tracking-tight">{backlink.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">{backlink.summary}</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {seriesNavigation ? (
+          <ContentSeriesNav
+            series={seriesNavigation.series}
+            currentIndex={seriesNavigation.currentIndex}
+            previous={seriesNavigation.previous}
+            next={seriesNavigation.next}
+          />
+        ) : null}
       </article>
     </div>
   );

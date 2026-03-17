@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const params = await searchParams;
   const nextPath = typeof params.next === "string" ? params.next : "/admin";
@@ -21,8 +21,18 @@ export default async function LoginPage({
           Sign in to manage the site.
         </h1>
         <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
-          After signing in, you can manage the profile page, publish posts and journal entries, moderate comments, configure LLM providers, and manage reader accounts.
+          Admins can manage the full site here, while reader accounts can sign in for commenting, account management, and My Library after email verification.
         </p>
+        {params.error === "verify-email" ? (
+          <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
+            Please verify your email before signing in. If needed, submit the form once and use the resend action shown below.
+          </div>
+        ) : null}
+        {params.error === "two-factor-required" ? (
+          <div className="rounded-[1.6rem] border border-[rgba(27,107,99,0.18)] bg-[rgba(27,107,99,0.08)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
+            This account requires two-factor authentication. Please sign in from the standard login form so the authenticator code step can be completed.
+          </div>
+        ) : null}
         {!isDatabaseConfigured() ? (
           <div className="rounded-[1.6rem] border border-dashed border-[rgba(168,123,53,0.4)] bg-[rgba(168,123,53,0.08)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
             The database is not configured yet. Public pages can still show demo content, but sign-in and admin features require a valid `DATABASE_URL`.
@@ -53,12 +63,20 @@ export default async function LoginPage({
 
       <div className="space-y-4">
         <AuthForm mode="login" nextPath={nextPath} />
-        <p className="text-sm text-[var(--ink-soft)]">
-          No account yet?
-          <Link href="/register" className="ml-2 font-semibold text-[var(--accent-strong)]">
-            Register
-          </Link>
-        </p>
+        <div className="space-y-2 text-sm text-[var(--ink-soft)]">
+          <p>
+            No account yet?
+            <Link href="/register" className="ml-2 font-semibold text-[var(--accent-strong)]">
+              Register
+            </Link>
+          </p>
+          <p>
+            Forgot your password?
+            <Link href="/forgot-password" className="ml-2 font-semibold text-[var(--accent-strong)]">
+              Reset it here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

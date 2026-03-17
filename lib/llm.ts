@@ -1,12 +1,107 @@
 import { ProviderAdapter } from "@prisma/client";
 import { getChatProviderBySlug } from "@/lib/queries";
+import type { ChatMessage } from "@/lib/chat/message";
 
-export type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
+export type ChatCompletionOptions = {
+  messages: ChatMessage[];
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
 };
 
-export async function requestChatCompletion(providerSlug: string, messages: ChatMessage[]) {
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.+)$/);
+
+  if (!match) {
+    throw new Error("Image attachments must use a base64 data URL.");
+  }
+
+  return {
+    mimeType: match[1],
+    base64: match[2],
+  };
+}
+
+function buildOpenAiCompatibleContent(message: ChatMessage) {
+  if (!message.attachments?.length) {
+    return message.content;
+  }
+
+  const parts: Array<
+    | {
+        type: "text";
+        text: string;
+      }
+    | {
+        type: "image_url";
+        image_url: {
+          url: string;
+          detail: "auto";
+        };
+      }
+  > = [];
+
+  if (message.content.trim()) {
+    parts.push({ type: "text", text: message.content });
+  }
+
+  for (const attachment of message.attachments) {
+    if (attachment.kind !== "image") {
+      continue;
+    }
+
+    parts.push({
+      type: "image_url",
+      image_url: {
+        url: attachment.dataUrl,
+        detail: "auto",
+      },
+    });
+  }
+
+  return parts.length === 1 && parts[0].type === "text" ? parts[0].text : parts;
+}
+
+function buildAnthropicContent(message: ChatMessage) {
+  const parts: Array<
+    | {
+        type: "text";
+        text: string;
+      }
+    | {
+        type: "image";
+        source: {
+          type: "base64";
+          media_type: string;
+          data: string;
+        };
+      }
+  > = [];
+
+  if (message.content.trim()) {
+    parts.push({ type: "text", text: message.content });
+  }
+
+  for (const attachment of message.attachments ?? []) {
+    if (attachment.kind !== "image") {
+      continue;
+    }
+
+    const parsed = parseDataUrl(attachment.dataUrl);
+    parts.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: parsed.mimeType,
+        data: parsed.base64,
+      },
+    });
+  }
+
+  return parts.length === 0 ? message.content : parts;
+}
+
+export async function requestChatCompletion(providerSlug: string, options: ChatCompletionOptions) {
   const provider = await getChatProviderBySlug(providerSlug);
 
   if (!provider || !provider.enabled) {
@@ -19,6 +114,11 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
     throw new Error(`Environment variable ${provider.apiKeyEnv} is missing or empty.`);
   }
 
+  const mergedSystemPrompt = [provider.systemPrompt, options.systemPrompt]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join("\n\n");
+
   if (provider.adapter === ProviderAdapter.OPENAI_COMPATIBLE) {
     const response = await fetch(`${provider.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
@@ -29,10 +129,14 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
       body: JSON.stringify({
         model: provider.model,
         messages: [
-          ...(provider.systemPrompt ? [{ role: "system", content: provider.systemPrompt }] : []),
-          ...messages,
+          ...(mergedSystemPrompt ? [{ role: "system", content: mergedSystemPrompt }] : []),
+          ...options.messages.map((message) => ({
+            role: message.role,
+            content: buildOpenAiCompatibleContent(message),
+          })),
         ],
-        temperature: 0.7,
+        temperature: options.temperature ?? 0.35,
+        max_tokens: options.maxTokens ?? 1024,
       }),
     });
 
@@ -46,7 +150,7 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
   }
 
   if (provider.adapter === ProviderAdapter.ANTHROPIC) {
-    const systemMessage = provider.systemPrompt ?? undefined;
+    const systemMessage = mergedSystemPrompt || undefined;
     const response = await fetch(`${provider.baseUrl.replace(/\/$/, "")}/messages`, {
       method: "POST",
       headers: {
@@ -57,8 +161,13 @@ export async function requestChatCompletion(providerSlug: string, messages: Chat
       body: JSON.stringify({
         model: provider.model,
         system: systemMessage,
-        max_tokens: 1024,
-        messages: messages.filter((message) => message.role !== "system"),
+        max_tokens: options.maxTokens ?? 1024,
+        messages: options.messages
+          .filter((message) => message.role !== "system")
+          .map((message) => ({
+            role: message.role,
+            content: buildAnthropicContent(message),
+          })),
       }),
     });
 

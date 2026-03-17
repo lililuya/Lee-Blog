@@ -24,14 +24,22 @@ export default async function EditJournalPage({
           <p className="section-kicker">Journal</p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight">编辑日志</h1>
         </div>
-        <form action={deleteJournalAction}>
+        <form
+          action={deleteJournalAction}
+          data-confirm-message="Delete this journal entry? This will remove it from the journal archive."
+        >
           <input type="hidden" name="entryId" value={entry.id} />
           <button type="submit" className="btn-secondary text-rose-700">
             删除日志
           </button>
         </form>
       </div>
-      <JournalForm action={updateJournalAction} submitLabel="保存修改" entry={entry} />
+        <JournalForm
+          action={updateJournalAction}
+          submitLabel="保存修改"
+          confirmMessage="保存这篇日志的修改吗？这会覆盖当前内容并更新发布时间设置。"
+          entry={entry}
+        />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Clock3, FileText } from "lucide-react";
+import { CategoryLinkPill } from "@/components/site/category-link-pill";
+import { TagLinkPill } from "@/components/site/tag-link-pill";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 type PostCardProps = {
@@ -10,6 +12,7 @@ type PostCardProps = {
     content?: string;
     category: string;
     tags: string[];
+    pinned?: boolean;
     readTimeMinutes: number;
     publishedAt: Date | string | null;
   };
@@ -23,7 +26,14 @@ export function PostCard({ post }: PostCardProps) {
     <article className="glass-card group relative overflow-hidden rounded-[2rem] p-6 transition duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)]">
       <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,_transparent,_rgba(27,107,99,0.42),_transparent)] opacity-0 transition group-hover:opacity-100" />
       <div className="mb-5 flex items-center justify-between gap-4 text-sm text-[var(--ink-soft)]">
-        <span className="badge-soft">{post.category}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {post.pinned ? (
+            <span className="rounded-full bg-[rgba(168,123,53,0.14)] px-3 py-1 text-xs font-semibold text-[var(--gold)]">
+              Pinned
+            </span>
+          ) : null}
+          <CategoryLinkPill category={post.category} />
+        </div>
         <span>{formatDate(post.publishedAt)}</span>
       </div>
       <div className="space-y-4">
@@ -31,9 +41,7 @@ export function PostCard({ post }: PostCardProps) {
         <p className="line-clamp-3 text-sm leading-7 text-[var(--ink-soft)]">{post.excerpt}</p>
         <div className="flex flex-wrap gap-2">
           {post.tags.map((tag) => (
-            <span key={tag} className="rounded-full border border-black/10 px-3 py-1 text-xs font-medium text-[var(--ink-soft)]">
-              #{tag}
-            </span>
+            <TagLinkPill key={tag} tag={tag} />
           ))}
         </div>
       </div>

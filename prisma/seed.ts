@@ -27,6 +27,11 @@ async function main() {
       name: adminName,
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: false,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -38,6 +43,11 @@ async function main() {
       email: adminEmail,
       role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: false,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       passwordHash: await hash(adminPassword, 12),
     },
   });
@@ -47,6 +57,11 @@ async function main() {
     update: {
       name: "读者评论",
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: true,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -58,6 +73,11 @@ async function main() {
       email: "2643233154@qq.com",
       role: UserRole.READER,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      emailVerificationRequired: false,
+      emailPostNotifications: true,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       passwordHash: await hash("ReaderDemo123!", 12),
     },
   });
@@ -72,7 +92,7 @@ async function main() {
       shortBio:
         "大家好，我是Lee，一名对技术充满热情的探索者。我的研究方向主要集中在计算机视觉和大模型部署，喜欢深入挖掘算法的潜力，并探索如何将前沿的AI模型高效地落地到实际应用中。除了工作，我也是个游戏爱好者，喜欢在虚拟世界中体验不同的冒险；同时音乐也是我生活中不可或缺的部分，无论是放松还是激发灵感，耳机里总少不了旋律的陪伴。期待与志同道合的朋友交流分享！",
       longBio:
-        "",
+        "我希望把这个博客做成一个真正长期可运营的个人知识系统，而不只是一个静态主页。除了日常写作，我也会在这里持续整理论文、实验、工程实践和对产品方向的思考，让内容积累、评论互动、自动化能力和后续 AI 工具模块都能自然衔接起来。",
       institution: "Independent Research Lab",
       department: "Applied AI Systems",
       location: "Shanghai / Remote",
@@ -83,6 +103,11 @@ async function main() {
       scholarUrl: "https://scholar.google.com",
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
+      backgroundImageUrl: "",
+      backgroundVideoUrl: "",
+      backgroundMediaMode: "IMAGE",
+      backgroundOverlayOpacity: 22,
+      assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",
         "Knowledge workflows",
@@ -120,6 +145,11 @@ async function main() {
       scholarUrl: "https://scholar.google.com",
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
+      backgroundImageUrl: "",
+      backgroundVideoUrl: "",
+      backgroundMediaMode: "IMAGE",
+      backgroundOverlayOpacity: 22,
+      assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",
         "Knowledge workflows",
@@ -148,6 +178,7 @@ async function main() {
       category: "AI Engineering",
       tags: ["AI", "Workflow", "Reliability"],
       status: "PUBLISHED",
+      pinned: false,
       featured: true,
       readTimeMinutes: 6,
       publishedAt: new Date("2026-03-01T08:30:00.000Z"),
@@ -163,6 +194,7 @@ async function main() {
       category: "AI Engineering",
       tags: ["AI", "Workflow", "Reliability"],
       status: "PUBLISHED",
+      pinned: false,
       featured: true,
       readTimeMinutes: 6,
       publishedAt: new Date("2026-03-01T08:30:00.000Z"),
@@ -181,6 +213,7 @@ async function main() {
       category: "Engineering Practice",
       tags: ["Blog", "Architecture", "Product"],
       status: "PUBLISHED",
+      pinned: true,
       featured: false,
       readTimeMinutes: 5,
       publishedAt: new Date("2026-03-07T09:00:00.000Z"),
@@ -196,9 +229,45 @@ async function main() {
       category: "Engineering Practice",
       tags: ["Blog", "Architecture", "Product"],
       status: "PUBLISHED",
+      pinned: true,
       featured: false,
       readTimeMinutes: 5,
       publishedAt: new Date("2026-03-07T09:00:00.000Z"),
+      authorId: admin.id,
+    },
+  });
+
+  await prisma.post.upsert({
+    where: { slug: "making-internal-ai-tools-legible" },
+    update: {
+      title: "Making Internal AI Tools Legible to the Teams Who Use Them",
+      excerpt:
+        "Transparent states, sensible checkpoints, and audit-friendly outputs help internal AI tools earn real trust from the people using them every day.",
+      content:
+        "## Legibility matters\n\nInternal AI tools fail when only their builders understand how they work. Teams trust systems that expose enough state to inspect decisions, validate source material, and recover from drift.\n\n## Practical ways to make systems legible\n\n- Show the retrieved evidence before a final answer.\n- Keep explicit handoff checkpoints in high-cost workflows.\n- Record enough operational detail for debugging and review.\n\n## Why this improves adoption\n\nTrust grows when systems can be questioned. That makes transparency a product feature, not just an engineering nicety.",
+      category: "AI Engineering",
+      tags: ["AI", "Reliability", "Operations"],
+      status: "PUBLISHED",
+      pinned: false,
+      featured: false,
+      readTimeMinutes: 4,
+      publishedAt: new Date("2026-03-12T07:45:00.000Z"),
+      authorId: admin.id,
+    },
+    create: {
+      title: "Making Internal AI Tools Legible to the Teams Who Use Them",
+      slug: "making-internal-ai-tools-legible",
+      excerpt:
+        "Transparent states, sensible checkpoints, and audit-friendly outputs help internal AI tools earn real trust from the people using them every day.",
+      content:
+        "## Legibility matters\n\nInternal AI tools fail when only their builders understand how they work. Teams trust systems that expose enough state to inspect decisions, validate source material, and recover from drift.\n\n## Practical ways to make systems legible\n\n- Show the retrieved evidence before a final answer.\n- Keep explicit handoff checkpoints in high-cost workflows.\n- Record enough operational detail for debugging and review.\n\n## Why this improves adoption\n\nTrust grows when systems can be questioned. That makes transparency a product feature, not just an engineering nicety.",
+      category: "AI Engineering",
+      tags: ["AI", "Reliability", "Operations"],
+      status: "PUBLISHED",
+      pinned: false,
+      featured: false,
+      readTimeMinutes: 4,
+      publishedAt: new Date("2026-03-12T07:45:00.000Z"),
       authorId: admin.id,
     },
   });
@@ -317,23 +386,25 @@ async function main() {
 
   await prisma.comment.deleteMany({ where: { postId: firstPost.id } });
 
-  await prisma.comment.createMany({
-    data: [
-      {
-        postId: firstPost.id,
-        authorId: reader.id,
-        status: "APPROVED",
-        content:
-          "AI运行过程中的中间状态特别有用，它使得AI的工作流程变得可观察、可检查，而不像是一个神秘的“黑箱”",
-      },
-      {
-        postId: firstPost.id,
-        authorId: admin.id,
-        status: "APPROVED",
-        content:
-          "这正是我们的目标。未来的每一个工具都应该提供充分的上下文信息，让读者能够核查整个过程。",
-      },
-    ],
+  const seededTopLevelComment = await prisma.comment.create({
+    data: {
+      postId: firstPost.id,
+      authorId: reader.id,
+      status: "APPROVED",
+      content:
+        "AI运行过程中的中间状态特别有用，它使得AI的工作流程变得可观察、可检查，而不像是一个神秘的“黑箱”",
+    },
+  });
+
+  await prisma.comment.create({
+    data: {
+      postId: firstPost.id,
+      authorId: admin.id,
+      parentId: seededTopLevelComment.id,
+      status: "APPROVED",
+      content:
+        "这正是我们的目标。未来的每一个工具都应该提供充分的上下文信息，让读者能够核查整个过程。",
+    },
   });
 
   await prisma.llmProvider.upsert({
