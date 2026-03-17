@@ -2,10 +2,13 @@
 
 import { CommentStatus, PostStatus, UserRole, UserStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { saveAdminProfileFromFormData } from "@/lib/admin-profile";
 import { ADMIN_AUDIT_ACTIONS, buildAdminAuditLogData } from "@/lib/audit";
+import { buildLoginSecurityContext } from "@/lib/auth-security";
+import { resolveCommentAuthorIdentity } from "@/lib/comment-identity";
 import { evaluateCommentModeration } from "@/lib/comment-moderation";
 import {
   notifyAdminsOfNewComment,
@@ -14,11 +17,15 @@ import {
 } from "@/lib/comment-notifications";
 import { snapshotNoteRevision, snapshotPostRevision } from "@/lib/content-revisions";
 import { notifySubscribersOfPublishedPost } from "@/lib/post-notifications";
-import { hasCommentReplySupport, prisma } from "@/lib/prisma";
+import {
+  hasCommentGuestFingerprintSupport,
+  hasCommentGuestIdentitySupport,
+  hasCommentReplySupport,
+  prisma,
+} from "@/lib/prisma";
 import {
   notifyAdminsInAppOfNewComment,
   notifyCommentAuthorOfReviewInApp,
-  notifyCommentAuthorOfSubmissionInApp,
   notifyUserOfApprovedReplyInApp,
 } from "@/lib/user-notifications";
 import { isUserMuted } from "@/lib/user-state";
@@ -62,6 +69,34 @@ function ensureDatabase() {
   if (!isDatabaseConfigured()) {
     throw new Error("DATABASE_URL is not configured.");
   }
+}
+
+async function getCommentRequestSecurityContext() {
+  const requestHeaders = await headers();
+  const forwardedFor = requestHeaders.get("x-forwarded-for");
+  const realIp = requestHeaders.get("x-real-ip");
+  const cfIp = requestHeaders.get("cf-connecting-ip");
+  const ipAddress =
+    forwardedFor?.split(",")[0]?.trim() || realIp?.trim() || cfIp?.trim() || null;
+
+  return buildLoginSecurityContext({
+    ipAddress,
+    userAgent: requestHeaders.get("user-agent"),
+  });
+}
+
+function getCommentAuditLabel(input: {
+  guestName?: string | null;
+  guestEmail?: string | null;
+  author?: {
+    name?: string | null;
+    email?: string | null;
+    avatarUrl?: string | null;
+    role?: UserRole | string | null;
+  } | null;
+}) {
+  const identity = resolveCommentAuthorIdentity(input);
+  return identity.email ? `${identity.name} <${identity.email}>` : identity.name;
 }
 
 
@@ -763,6 +798,7 @@ export async function moderateCommentAction(formData: FormData) {
   const admin = await requireAdmin();
   ensureDatabase();
   const repliesSupported = hasCommentReplySupport();
+  const guestIdentitySupported = hasCommentGuestIdentitySupport();
 
   const parsed = commentDecisionSchema.parse({
     commentId: getString(formData, "commentId"),
@@ -779,11 +815,19 @@ export async function moderateCommentAction(formData: FormData) {
             select: {
               id: true,
               content: true,
+              authorId: true,
+              ...(guestIdentitySupported
+                ? {
+                    guestName: true,
+                    guestEmail: true,
+                  }
+                : {}),
               author: {
                 select: {
                   id: true,
                   name: true,
                   email: true,
+                  role: true,
                 },
               },
             },
@@ -802,6 +846,8 @@ export async function moderateCommentAction(formData: FormData) {
     return;
   }
 
+  const commentAuthor = resolveCommentAuthorIdentity(comment);
+
   await prisma.$transaction(async (tx) => {
     await tx.comment.update({
       where: { id: parsed.commentId },
@@ -811,9 +857,9 @@ export async function moderateCommentAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_MODERATED,
-        summary: `Set comment by ${comment.author.email} on "${comment.post.title}" to ${parsed.status}.`,
+        summary: `Set comment by ${getCommentAuditLabel(comment)} on "${comment.post.title}" to ${parsed.status}.`,
         actorId: admin.id,
-        targetUserId: comment.authorId,
+        targetUserId: comment.authorId ?? null,
         metadata: {
           commentId: comment.id,
           postId: comment.postId,
@@ -844,42 +890,76 @@ export async function moderateCommentAction(formData: FormData) {
           slug: comment.post.slug,
         },
         author: {
-          name: comment.author.name,
-          email: comment.author.email,
+          name: commentAuthor.name,
+          email: commentAuthor.email,
         },
-        authorUserId: comment.authorId,
+        authorUserId: comment.authorId ?? null,
       }),
     );
 
-    await safeRunCommentNotification("review-result-in-app", () =>
-      notifyCommentAuthorOfReviewInApp({
-        userId: comment.authorId,
-        status: reviewStatus,
-        isReply: Boolean(comment.parentId),
-        commentId: comment.id,
-        post: {
-          title: comment.post.title,
-          slug: comment.post.slug,
-        },
-      }),
-    );
+    if (comment.authorId) {
+      const commentAuthorId = comment.authorId;
+
+      await safeRunCommentNotification("review-result-in-app", () =>
+        notifyCommentAuthorOfReviewInApp({
+          userId: commentAuthorId,
+          status: reviewStatus,
+          isReply: Boolean(comment.parentId),
+          commentId: comment.id,
+          post: {
+            title: comment.post.title,
+            slug: comment.post.slug,
+          },
+        }),
+      );
+    }
   }
 
-  const parentCommentForNotification = repliesSupported
-    ? (
-        comment as typeof comment & {
-          parent: {
+  const parentCommentRecord:
+    | {
+        id: string;
+        content: string;
+        authorId: string | null;
+        guestName?: string | null;
+        guestEmail?: string | null;
+        author?: {
+          id: string;
+          name: string;
+          email: string;
+          role?: UserRole | string | null;
+        } | null;
+      }
+    | null =
+    repliesSupported && "parent" in comment
+      ? (comment.parent as {
+          id: string;
+          content: string;
+          authorId: string | null;
+          guestName?: string | null;
+          guestEmail?: string | null;
+          author?: {
             id: string;
-            content: string;
-            author: {
-              id: string;
-              name: string;
-              email: string;
-            };
+            name: string;
+            email: string;
+            role?: UserRole | string | null;
           } | null;
+        } | null)
+      : null;
+
+  const parentCommentForNotification: {
+    id: string;
+    content: string;
+    authorId: string | null;
+    author: ReturnType<typeof resolveCommentAuthorIdentity>;
+  } | null =
+    parentCommentRecord
+      ? {
+          id: parentCommentRecord.id,
+          content: parentCommentRecord.content,
+          authorId: parentCommentRecord.authorId ?? null,
+          author: resolveCommentAuthorIdentity(parentCommentRecord),
         }
-      ).parent
-    : null;
+      : null;
 
   if (
     comment.status !== parsed.status &&
@@ -892,10 +972,10 @@ export async function moderateCommentAction(formData: FormData) {
           name: parentCommentForNotification.author.name,
           email: parentCommentForNotification.author.email,
         },
-        recipientUserId: parentCommentForNotification.author.id,
+        recipientUserId: parentCommentForNotification.authorId ?? null,
         replier: {
-          name: comment.author.name,
-          email: comment.author.email,
+          name: commentAuthor.name,
+          email: commentAuthor.email,
         },
         post: {
           title: comment.post.title,
@@ -912,19 +992,24 @@ export async function moderateCommentAction(formData: FormData) {
       }),
     );
 
-    await safeRunCommentNotification("reply-approved-review-in-app", () =>
-      notifyUserOfApprovedReplyInApp({
-        recipientId: parentCommentForNotification.author.id,
-        replierId: comment.authorId,
-        replierName: comment.author.name,
-        parentCommentId: parentCommentForNotification.id,
-        replyId: comment.id,
-        post: {
-          title: comment.post.title,
-          slug: comment.post.slug,
-        },
-      }),
-    );
+    if (parentCommentForNotification.authorId && comment.authorId) {
+      const recipientId = parentCommentForNotification.authorId;
+      const replierId = comment.authorId;
+
+      await safeRunCommentNotification("reply-approved-review-in-app", () =>
+        notifyUserOfApprovedReplyInApp({
+          recipientId,
+          replierId,
+          replierName: commentAuthor.name,
+          parentCommentId: parentCommentForNotification.id,
+          replyId: comment.id,
+          post: {
+            title: comment.post.title,
+            slug: comment.post.slug,
+          },
+        }),
+      );
+    }
   }
 
   revalidatePath("/admin/comments");
@@ -961,9 +1046,9 @@ export async function deleteCommentAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_DELETED,
-        summary: `Deleted comment by ${comment.author.email} on "${comment.post.title}".`,
+        summary: `Deleted comment by ${getCommentAuditLabel(comment)} on "${comment.post.title}".`,
         actorId: admin.id,
-        targetUserId: comment.authorId,
+        targetUserId: comment.authorId ?? null,
         metadata: {
           commentId: comment.id,
           postId: comment.postId,
@@ -983,33 +1068,62 @@ export async function deleteCommentAction(formData: FormData) {
 }
 
 export async function createCommentAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
   ensureDatabase();
   const repliesSupported = hasCommentReplySupport();
+  const guestIdentitySupported = hasCommentGuestIdentitySupport();
+  const guestFingerprintSupported = hasCommentGuestFingerprintSupport();
 
   const postId = getString(formData, "postId");
   const postSlug = getString(formData, "postSlug");
   const honeypotValue = getString(formData, "website");
-  const parsed = commentSchema.parse({
+  const parsed = commentSchema.safeParse({
     postId,
     parentId: getOptionalString(formData, "parentId"),
+    guestName: getOptionalString(formData, "guestName") ?? undefined,
+    guestEmail: getOptionalString(formData, "guestEmail"),
     content: getString(formData, "content"),
   });
 
-  if (user.status !== UserStatus.ACTIVE) {
+  if (!parsed.success) {
+    redirectToCommentFeedback(postSlug, "invalid");
+  }
+
+  const isAdminComment = user?.role === UserRole.ADMIN;
+  const guestName = parsed.data.guestName?.trim() || null;
+  const guestEmail = parsed.data.guestEmail?.trim().toLowerCase() || null;
+  const commentAuthor = isAdminComment
+    ? {
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        kind: "ADMIN" as const,
+        isAdmin: true,
+        isGuest: false,
+      }
+    : resolveCommentAuthorIdentity({
+        guestName,
+        guestEmail,
+      });
+
+  if (user && user.status !== UserStatus.ACTIVE) {
     redirectToCommentFeedback(postSlug, "blocked");
   }
 
-  if (user.emailVerificationRequired && !user.emailVerifiedAt) {
+  if (user && user.emailVerificationRequired && !user.emailVerifiedAt) {
     redirectToCommentFeedback(postSlug, "verify-email");
   }
 
-  if (isUserMuted(user.mutedUntil)) {
+  if (user && isUserMuted(user.mutedUntil)) {
     redirectToCommentFeedback(postSlug, "muted");
   }
 
+  if (!isAdminComment && !guestName) {
+    redirectToCommentFeedback(postSlug, "invalid");
+  }
+
   const post = await prisma.post.findUnique({
-    where: { id: parsed.postId },
+    where: { id: parsed.data.postId },
     select: {
       title: true,
       slug: true,
@@ -1021,24 +1135,32 @@ export async function createCommentAction(formData: FormData) {
     redirect("/blog");
   }
 
-  if (parsed.parentId && !repliesSupported) {
+  if (parsed.data.parentId && !repliesSupported) {
     redirectToCommentFeedback(postSlug, "reply-unavailable");
   }
 
-  const parentComment = parsed.parentId && repliesSupported
+  const parentComment = parsed.data.parentId && repliesSupported
     ? await prisma.comment.findUnique({
-        where: { id: parsed.parentId },
+        where: { id: parsed.data.parentId },
         select: {
           id: true,
           content: true,
           status: true,
           postId: true,
           parentId: true,
+          authorId: true,
+          ...(guestIdentitySupported
+            ? {
+                guestName: true,
+                guestEmail: true,
+              }
+            : {}),
           author: {
             select: {
               id: true,
               name: true,
               email: true,
+              role: true,
             },
           },
         },
@@ -1046,9 +1168,9 @@ export async function createCommentAction(formData: FormData) {
     : null;
 
   if (
-    parsed.parentId &&
+    parsed.data.parentId &&
     (!parentComment ||
-      parentComment.postId !== parsed.postId ||
+      parentComment.postId !== parsed.data.postId ||
       parentComment.status !== CommentStatus.APPROVED)
   ) {
     redirectToCommentFeedback(postSlug, "reply-unavailable");
@@ -1057,19 +1179,27 @@ export async function createCommentAction(formData: FormData) {
   let nextStatus: CommentStatus = CommentStatus.APPROVED;
   let moderationNotes: string | null = null;
   let moderationMatches: string[] = [];
+  let submittedIpHash: string | null = null;
 
-  if (user.role !== UserRole.ADMIN) {
+  if (!isAdminComment) {
     if (honeypotValue) {
       redirectToCommentFeedback(postSlug, "spam-blocked");
     }
 
+    const securityContext = await getCommentRequestSecurityContext();
+    submittedIpHash = guestFingerprintSupported ? securityContext.ipHash ?? null : null;
     const now = Date.now();
+    const rateLimitMatchers = [
+      ...(guestFingerprintSupported && submittedIpHash ? [{ submittedIpHash }] : []),
+      ...(guestIdentitySupported && guestEmail ? [{ guestEmail }] : []),
+      ...(guestIdentitySupported && guestName ? [{ guestName }] : []),
+    ];
     const recentComments = await prisma.comment.findMany({
       where: {
-        authorId: user.id,
         createdAt: {
           gte: new Date(now - COMMENT_DUPLICATE_WINDOW_MS),
         },
+        ...(rateLimitMatchers.length > 0 ? { OR: rateLimitMatchers } : {}),
       },
       select: {
         content: true,
@@ -1089,10 +1219,10 @@ export async function createCommentAction(formData: FormData) {
       redirectToCommentFeedback(postSlug, "rate-limited");
     }
 
-    const normalizedContent = normalizeCommentContent(parsed.content);
+    const normalizedContent = normalizeCommentContent(parsed.data.content);
     const duplicateComment = recentComments.some(
       (comment) =>
-        comment.postId === parsed.postId &&
+        comment.postId === parsed.data.postId &&
         normalizeCommentContent(comment.content) === normalizedContent,
     );
 
@@ -1100,31 +1230,38 @@ export async function createCommentAction(formData: FormData) {
       redirectToCommentFeedback(postSlug, "duplicate");
     }
 
-    if (looksLikeSpamComment(parsed.content)) {
+    if (looksLikeSpamComment(parsed.data.content)) {
       redirectToCommentFeedback(postSlug, "spam-blocked");
     }
 
-    const moderationResult = await evaluateCommentModeration(parsed.content);
+    const moderationResult = await evaluateCommentModeration(parsed.data.content);
     nextStatus = moderationResult.status;
     moderationNotes = moderationResult.notes;
     moderationMatches = moderationResult.matches;
   }
 
-  const finalStatus = user.role === UserRole.ADMIN ? CommentStatus.APPROVED : nextStatus;
+  const finalStatus = isAdminComment ? CommentStatus.APPROVED : nextStatus;
 
   const createdComment = await prisma.comment.create({
     data: {
-      postId: parsed.postId,
-      ...(repliesSupported ? { parentId: parsed.parentId ?? null } : {}),
-      content: parsed.content,
-      authorId: user.id,
+      postId: parsed.data.postId,
+      ...(repliesSupported ? { parentId: parsed.data.parentId ?? null } : {}),
+      content: parsed.data.content,
+      authorId: user?.id ?? null,
+      ...(guestIdentitySupported
+        ? {
+            guestName: isAdminComment ? null : guestName,
+            guestEmail: isAdminComment ? null : guestEmail,
+          }
+        : {}),
+      ...(guestFingerprintSupported ? { submittedIpHash } : {}),
       status: finalStatus,
       moderationNotes,
       moderationMatches,
     },
   });
 
-  if (user.role !== UserRole.ADMIN) {
+  if (!isAdminComment) {
     await safeRunCommentNotification("new-comment", () =>
       notifyAdminsOfNewComment({
         comment: {
@@ -1140,16 +1277,16 @@ export async function createCommentAction(formData: FormData) {
           slug: postSlug,
         },
         author: {
-          name: user.name,
-          email: user.email,
+          name: commentAuthor.name,
+          email: commentAuthor.email,
         },
         replyTo: parentComment
           ? {
               id: parentComment.id,
               content: parentComment.content,
               author: {
-                name: parentComment.author.name,
-                email: parentComment.author.email,
+                name: resolveCommentAuthorIdentity(parentComment).name,
+                email: resolveCommentAuthorIdentity(parentComment).email,
               },
             }
           : null,
@@ -1170,46 +1307,35 @@ export async function createCommentAction(formData: FormData) {
           slug: postSlug,
         },
         author: {
-          id: user.id,
-          name: user.name,
+          id: user?.id ?? null,
+          name: commentAuthor.name,
         },
         replyTo: parentComment
           ? {
               id: parentComment.id,
               author: {
-                id: parentComment.author.id,
-                name: parentComment.author.name,
+                id: parentComment.authorId ?? null,
+                name: resolveCommentAuthorIdentity(parentComment).name,
               },
             }
           : null,
       }),
     );
-
-    await safeRunCommentNotification("comment-submission-in-app", () =>
-      notifyCommentAuthorOfSubmissionInApp({
-        userId: user.id,
-        status: finalStatus,
-        isReply: Boolean(parentComment),
-        commentId: createdComment.id,
-        post: {
-          title: post.title,
-          slug: postSlug,
-        },
-      }),
-    );
   }
 
   if (finalStatus === CommentStatus.APPROVED && parentComment) {
+    const parentCommentAuthor = resolveCommentAuthorIdentity(parentComment);
+
     await safeRunCommentNotification("reply-approved-immediate", () =>
       notifyAuthorOfCommentReply({
         recipient: {
-          name: parentComment.author.name,
-          email: parentComment.author.email,
+          name: parentCommentAuthor.name,
+          email: parentCommentAuthor.email,
         },
-        recipientUserId: parentComment.author.id,
+        recipientUserId: parentComment.authorId ?? null,
         replier: {
-          name: user.name,
-          email: user.email,
+          name: commentAuthor.name,
+          email: commentAuthor.email,
         },
         post: {
           title: post.title,
@@ -1226,19 +1352,24 @@ export async function createCommentAction(formData: FormData) {
       }),
     );
 
-    await safeRunCommentNotification("reply-approved-immediate-in-app", () =>
-      notifyUserOfApprovedReplyInApp({
-        recipientId: parentComment.author.id,
-        replierId: user.id,
-        replierName: user.name,
-        parentCommentId: parentComment.id,
-        replyId: createdComment.id,
-        post: {
-          title: post.title,
-          slug: postSlug,
-        },
-      }),
-    );
+    if (parentComment.authorId && user?.id) {
+      const recipientId = parentComment.authorId;
+      const replierId = user.id;
+
+      await safeRunCommentNotification("reply-approved-immediate-in-app", () =>
+        notifyUserOfApprovedReplyInApp({
+          recipientId,
+          replierId,
+          replierName: commentAuthor.name,
+          parentCommentId: parentComment.id,
+          replyId: createdComment.id,
+          post: {
+            title: post.title,
+            slug: postSlug,
+          },
+        }),
+      );
+    }
   }
 
   revalidatePath(`/blog/${postSlug}`);

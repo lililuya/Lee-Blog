@@ -1,25 +1,26 @@
 # Feature Overview
 
-This document is the product-level summary for the current version of Scholar Blog Studio.
+This document summarizes the current product scope of Scholar Blog Studio.
 
 ## 1. Positioning
 
-The project is best understood as three products merged into one repository:
+The project now behaves like four tightly connected layers in one repository:
 
-- a personal academic website
-- a lightweight publishing CMS
-- a research workspace with AI-assisted tooling
+- a public academic-style website
+- an admin-first publishing CMS
+- a private research workspace for the site owner
+- an AI tooling and RAG layer
 
 ## 2. Public-facing features
 
 ### Homepage and profile
 
 - academic-style landing page
-- profile, bio, and contact surfaces
+- profile, bio, links, and contact surfaces
 - theme toggle
-- responsive layout with side-rail navigation
+- responsive side-rail navigation
 
-### Content publishing
+### Publishing
 
 - blog posts
 - evergreen notes
@@ -29,7 +30,7 @@ The project is best understood as three products merged into one repository:
 - scheduled publishing
 - revision history and restore
 
-### Discovery and navigation
+### Discovery
 
 - archive page
 - tag landing pages
@@ -40,35 +41,43 @@ The project is best understood as three products merged into one repository:
 - RSS and JSON Feed
 - sitemap and robots output
 
-## 3. Account and community features
+## 3. Reader interaction and admin identity
 
-### Authentication lifecycle
+### Public access model
 
-- registration
-- login
-- logout
-- email verification
-- forgot password
-- reset password
-- change password
-- session invalidation on sensitive changes
+- public reading does not require login
+- public registration is closed
+- `/register` remains as an informational page instead of a live signup flow
 
 ### Comment system
 
-- signed-in commenting
-- optional email verification gate before commenting
-- per-user rate limiting
-- spam heuristics and duplicate checks
-- moderation queue
-- auto-review based on allow/block rule lists
-- threaded reply support
+- guest commenting with required display name
+- optional guest email for follow-up notifications
+- anti-spam honeypot field
+- rate limiting and duplicate-comment checks
+- auto-review based on allow/block moderation rules
+- moderation queue for risky comments
+- threaded replies kept to a single readable layer
+- admin replies publish immediately
 - admin delete and review controls
+
+### Admin authentication lifecycle
+
+- admin-only sign-in
+- logout
+- admin email verification
+- forgot password
+- reset password
+- change password
+- session invalidation after sensitive changes
+- login rate limiting and unusual-login alerts
+- admin-only 2FA
 
 ### Notification loop
 
-- email notifications for comment lifecycle events
-- in-app notifications under `/account/notifications`
-- unread counters in navigation
+- admin email notifications for new comments and moderation events
+- guest reply/review emails when an email address was provided
+- private admin inbox under `/account/notifications`
 
 ## 4. Research workflow features
 
@@ -77,8 +86,8 @@ The project is best understood as three products merged into one repository:
 - admin-managed arXiv topic definitions
 - manual and scheduled paper sync
 - public papers page
-- signed-in personal library
-- status tracking (`TO_READ`, `READING`, `COMPLETED`, `ARCHIVED`)
+- private admin paper library
+- reading status tracking (`TO_READ`, `READING`, `COMPLETED`, `ARCHIVED`)
 - progress percentage
 - last-read tracking
 - annotations and highlighted quotes
@@ -109,16 +118,14 @@ The project is best understood as three products merged into one repository:
 - scheduled publish fields
 - revision history restore flows
 
-### Moderation and user management
+### Moderation and private workspace
 
 - comment moderation dashboard
 - moderation rule management
-- user role changes
-- mute / unmute
-- suspend / restore
-- soft delete / restore
-- revoke sessions
+- comment review notes and match inspection
 - audit logs
+- admin account preferences
+- admin inbox and notification preferences
 
 ### Analytics and exports
 
@@ -153,25 +160,27 @@ The project is best understood as three products merged into one repository:
 
 - custom session auth
 - HttpOnly cookie storage
-- email verification support
 - password reset tokens
+- admin email verification support
 - login attempt rate limiting
 - unusual login alerts
 - admin-only 2FA
 - moderation and audit controls
+- guest-comment anti-spam and rule-based review
 
 ## 8. What is intentionally still lightweight
 
-The project is already broad, but some areas are intentionally practical rather than enterprise-heavy:
+The project is already broad, but several areas stay intentionally practical:
 
-- roles are simple (`ADMIN` and `READER`)
-- notification center is focused on comment/account flows
+- no public member area or reader-account product flow
+- role design stays simple even though the schema still keeps legacy compatibility
+- the private workspace is owner-focused rather than multi-user collaboration
 - RAG sync is manual-first
-- exports are designed for migration and backup, not multi-tenant reporting
+- exports are designed for backup and migration, not multi-tenant reporting
 
 ## 9. Recommended next-level enhancements
 
-If you continue after this version, strong candidates include:
+Strong next steps after this version include:
 
 - richer notification preferences
 - scheduled background workers on the server side

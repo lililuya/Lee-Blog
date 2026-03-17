@@ -13,16 +13,18 @@ A practical production setup is:
 - GitHub Actions for CI/CD and scheduled jobs
 - optional GHCR image registry
 
-This keeps the deployment simple while still supporting:
+This keeps deployment simple while still supporting:
 
+- public publishing
 - admin workflows
+- guest-comment moderation
 - scheduled paper and digest jobs
 - SMTP-based email flows
-- AI/RAG integrations
+- AI and RAG integrations
 
 ## 2. Environment groups
 
-## 2.1 Core runtime
+### 2.1 Core runtime
 
 Required baseline values:
 
@@ -36,26 +38,35 @@ Required baseline values:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 
-## 2.2 Account and security
+### 2.2 Admin auth and security
 
 Common security-related values:
 
 - `SESSION_SECRET`
-- mail variables used for verification/reset delivery
-- optional 2FA-related app naming values
+- mail variables used for admin verification and password reset
+- optional 2FA naming values
 
-## 2.3 Email delivery
+### 2.3 Email delivery
 
-If you want email verification, password reset, comment lifecycle mail, or publish notifications, configure SMTP values in `.env`.
+If you want the full security and moderation loop, configure SMTP values in `.env`.
+
+Typical email use cases now are:
+
+- admin verification
+- password reset
+- guest comment review / reply notifications
+- admin moderation notifications
+- optional new-post notifications for the private admin account
 
 Recommended validation steps:
 
-1. test registration
-2. test resend verification
-3. test forgot password
-4. test one comment moderation notification
+1. test admin verification or resend verification
+2. test forgot password
+3. submit one guest comment
+4. review that comment from `/admin/comments`
+5. confirm at least one moderation or reply email path
 
-## 2.4 AI and RAG
+### 2.4 AI and RAG
 
 Depending on which providers you enable, configure:
 
@@ -71,7 +82,7 @@ npm run rag:sync
 
 ## 3. Local development
 
-## 3.1 Node.js workflow
+### 3.1 Node.js workflow
 
 ```bash
 npm ci
@@ -80,7 +91,7 @@ npm run db:seed
 npm run dev
 ```
 
-## 3.2 Docker Compose workflow
+### 3.2 Docker Compose workflow
 
 ```bash
 docker compose up -d db
@@ -100,7 +111,7 @@ Recommended order:
 5. run `npm run db:push`
 6. run `npm run db:seed`
 7. start the app container
-8. verify login, admin pages, and mail delivery
+8. verify admin login, guest comments, and mail delivery
 9. verify scheduled jobs
 
 ## 5. Scheduled jobs
@@ -117,7 +128,7 @@ These can run via:
 - server cron
 - any other scheduler in your infrastructure
 
-## 5.1 Typical commands
+### 5.1 Typical commands
 
 ```bash
 npm run papers:sync
@@ -130,11 +141,14 @@ npm run rag:sync
 After every release, validate:
 
 - homepage renders
-- login and logout work
+- `/register` shows the registration-closed message
+- admin login and logout work
 - admin dashboard opens
-- post detail page renders comments
+- one blog detail page renders its comment section
+- a guest comment can be submitted
+- `/admin/comments` can review that comment
 - `/tools` opens and can validate provider requests
-- `/account/notifications` loads for signed-in users
+- `/account/notifications` loads for the admin account if you use the private inbox
 - one analytics visit is recorded
 
 ## 7. Backup recommendations

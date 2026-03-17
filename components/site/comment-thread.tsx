@@ -1,17 +1,24 @@
-import Link from "next/link";
-import { CornerDownRight, MessageSquareMore } from "lucide-react";
+import { CornerDownRight } from "lucide-react";
 import { createCommentAction } from "@/lib/actions/content-actions";
 import type { CurrentUser } from "@/lib/auth";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { isUserMuted } from "@/lib/user-state";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
+type CommentAuthor = {
+  name: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+  isAdmin?: boolean;
+  isGuest?: boolean;
+};
 
 type CommentItem = {
   id: string;
   parentId?: string | null;
   content: string;
   createdAt: Date | string;
-  author: { name: string };
+  author: CommentAuthor;
 };
 
 type ThreadedReply = CommentItem & {
@@ -62,6 +69,8 @@ function renderStatusMessage(statusMessage: string | undefined) {
       return "This looks like a duplicate of a recent comment you already sent.";
     case "spam-blocked":
       return "The comment matched anti-spam rules. Please remove excessive links or promotional text and try again.";
+    case "invalid":
+      return "Please fill in the required fields and keep the comment within the allowed length.";
     default:
       return null;
   }
@@ -110,23 +119,47 @@ function buildCommentThread(comments: CommentItem[]): ThreadedComment[] {
     });
 }
 
+function CommentAuthorBadge({ author }: { author: CommentAuthor }) {
+  if (author.isAdmin) {
+    return (
+      <span className="rounded-full bg-[rgba(27,107,99,0.12)] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--accent-strong)]">
+        Admin
+      </span>
+    );
+  }
+
+  if (author.isGuest) {
+    return (
+      <span className="rounded-full bg-black/5 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
+        Guest
+      </span>
+    );
+  }
+
+  return null;
+}
+
 function CommentComposer({
   postId,
   postSlug,
   parentId,
-  label,
+  currentUser,
   submitLabel,
   placeholder,
   websiteFieldId,
+  replyToName,
 }: {
   postId: string;
   postSlug: string;
   parentId?: string | null;
-  label: string;
+  currentUser: CurrentUser;
   submitLabel: string;
   placeholder: string;
   websiteFieldId: string;
+  replyToName?: string | null;
 }) {
+  const isGuest = !currentUser;
+
   return (
     <form action={createCommentAction} className="space-y-4">
       <input type="hidden" name="postId" value={postId} />
@@ -142,8 +175,46 @@ function CommentComposer({
           autoComplete="off"
         />
       </div>
+
+      {replyToName ? (
+        <div className="rounded-[1rem] border border-black/8 bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+          Replying to <span className="font-semibold text-[var(--ink)]">@{replyToName}</span>
+        </div>
+      ) : null}
+
+      {isGuest ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold text-[var(--ink)]">Name</span>
+            <input
+              name="guestName"
+              required
+              minLength={2}
+              maxLength={60}
+              className="field"
+              placeholder="How should your name appear?"
+            />
+          </label>
+          <label className="block space-y-2">
+            <span className="text-sm font-semibold text-[var(--ink)]">Email</span>
+            <input
+              name="guestEmail"
+              type="email"
+              className="field"
+              placeholder="Optional, kept private"
+            />
+          </label>
+        </div>
+      ) : (
+        <div className="rounded-[1rem] border border-black/8 bg-[var(--panel-soft)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+          Posting as <span className="font-semibold text-[var(--ink)]">{currentUser.name}</span>
+        </div>
+      )}
+
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--ink)]">{label}</span>
+        <span className="text-sm font-semibold text-[var(--ink)]">
+          {parentId ? "Reply" : "Comment"}
+        </span>
         <textarea
           name="content"
           required
@@ -154,8 +225,133 @@ function CommentComposer({
           placeholder={placeholder}
         />
       </label>
+
+      {isGuest ? (
+        <p className="text-xs leading-6 text-[var(--ink-soft)]">
+          Your name is public. Email stays private and is only used for moderation or reply
+          follow-ups when available.
+        </p>
+      ) : null}
+
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>
+  );
+}
+
+function ReplyTrigger({
+  postId,
+  postSlug,
+  currentUser,
+  targetCommentId,
+  targetName,
+}: {
+  postId: string;
+  postSlug: string;
+  currentUser: CurrentUser;
+  targetCommentId: string;
+  targetName: string;
+}) {
+  return (
+    <details className="comment-thread-reply-box rounded-[1rem] border border-dashed border-black/10 p-3">
+      <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent-strong)]">
+        Reply
+      </summary>
+      <div className="mt-3">
+        <CommentComposer
+          postId={postId}
+          postSlug={postSlug}
+          parentId={targetCommentId}
+          currentUser={currentUser}
+          submitLabel="Submit reply"
+          placeholder="Add a thoughtful follow-up."
+          replyToName={targetName}
+          websiteFieldId={`comment-website-${targetCommentId}`}
+        />
+      </div>
+    </details>
+  );
+}
+
+function CommentCard({
+  comment,
+  postId,
+  postSlug,
+  currentUser,
+  canReply,
+}: {
+  comment: ThreadedComment;
+  postId: string;
+  postSlug: string;
+  currentUser: CurrentUser;
+  canReply: boolean;
+}) {
+  return (
+    <article
+      id={`comment-${comment.id}`}
+      className="comment-thread-card rounded-[1.4rem] border border-black/8 bg-[var(--panel-soft)] p-5"
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
+          <CommentAuthorBadge author={comment.author} />
+        </div>
+        <span>{formatDate(comment.createdAt, "yyyy-MM-dd HH:mm")}</span>
+      </div>
+      <p className="text-sm leading-7 text-[var(--ink-soft)]">{comment.content}</p>
+
+      {comment.replies.length > 0 ? (
+        <div className="comment-thread-replies mt-5 space-y-3 border-l border-black/8 pl-4 md:pl-6">
+          {comment.replies.map((reply) => (
+            <article
+              key={reply.id}
+              id={`comment-${reply.id}`}
+              className="comment-thread-reply rounded-[1.2rem] border border-black/8 bg-[var(--panel-soft)] p-4"
+            >
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
+                <div className="inline-flex items-center gap-2 font-semibold text-[var(--ink)]">
+                  <CornerDownRight className="h-4 w-4 text-[var(--accent-strong)]" />
+                  <span>{reply.author.name}</span>
+                  <CommentAuthorBadge author={reply.author} />
+                </div>
+                <span>{formatDate(reply.createdAt, "yyyy-MM-dd HH:mm")}</span>
+              </div>
+
+              {reply.replyToAuthorName ? (
+                <p className="mb-2 text-xs font-medium text-[var(--ink-soft)]">
+                  @{reply.replyToAuthorName}
+                </p>
+              ) : null}
+
+              <p className="text-sm leading-7 text-[var(--ink-soft)]">{reply.content}</p>
+
+              {canReply ? (
+                <div className="mt-4">
+                  <ReplyTrigger
+                    postId={postId}
+                    postSlug={postSlug}
+                    currentUser={currentUser}
+                    targetCommentId={reply.id}
+                    targetName={reply.author.name}
+                  />
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {canReply ? (
+        <div className="mt-5">
+          <ReplyTrigger
+            postId={postId}
+            postSlug={postSlug}
+            currentUser={currentUser}
+            targetCommentId={comment.id}
+            targetName={comment.author.name}
+          />
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -171,20 +367,19 @@ export function CommentThread({
   const flashMessage = renderStatusMessage(statusMessage);
   const muted = currentUser ? isUserMuted(currentUser.mutedUntil) : false;
   const threadedComments = buildCommentThread(comments);
-  const canReply = replyEnabled && Boolean(currentUser) && !muted;
+  const canReply = replyEnabled && !muted;
 
   return (
     <section
       id={sectionId}
-      className="comment-thread-shell scroll-mt-28 space-y-8 rounded-[2rem] border border-black/8 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+      className="comment-thread-shell scroll-mt-28 space-y-8 rounded-[2rem] border border-black/8 bg-[var(--panel)] p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       <div className="space-y-2">
         <p className="section-kicker">Comments</p>
         <h2 className="font-serif text-3xl font-semibold tracking-tight">Discussion</h2>
         <p className="text-sm leading-7 text-[var(--ink-soft)]">
-          Reader comments are scanned automatically first. Clean comments can go live immediately,
-          while risky ones are held for admin review. Direct replies are shown in one flattened
-          layer so the discussion stays readable even when you answer another reply.
+          Guest comments are welcome. Every submission goes through anti-spam checks first, and
+          replies stay in a single readable layer with clear @-mentions.
         </p>
       </div>
 
@@ -197,119 +392,58 @@ export function CommentThread({
       <div className="space-y-4">
         {threadedComments.length > 0 ? (
           threadedComments.map((comment) => (
-            <article
+            <CommentCard
               key={comment.id}
-              id={`comment-${comment.id}`}
-              className="comment-thread-card rounded-[1.4rem] border border-black/8 p-5"
-            >
-              <div className="mb-3 flex items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
-                <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
-                <span>{formatDate(comment.createdAt, "yyyy-MM-dd HH:mm")}</span>
-              </div>
-              <p className="text-sm leading-7 text-[var(--ink-soft)]">{comment.content}</p>
-
-              {comment.replies.length > 0 ? (
-                <div className="comment-thread-replies mt-5 space-y-3 border-l border-black/8 pl-4 md:pl-6">
-                  {comment.replies.map((reply) => (
-                    <article
-                      key={reply.id}
-                      id={`comment-${reply.id}`}
-                      className="comment-thread-reply rounded-[1.2rem] border border-black/8 p-4"
-                    >
-                      <div className="mb-2 flex items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
-                        <span className="inline-flex items-center gap-2 font-semibold text-[var(--ink)]">
-                          <CornerDownRight className="h-4 w-4 text-[var(--accent-strong)]" />
-                          {reply.author.name}
-                        </span>
-                        <span>{formatDate(reply.createdAt, "yyyy-MM-dd HH:mm")}</span>
-                      </div>
-                      {reply.replyToAuthorName ? (
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                          Replying to {reply.replyToAuthorName}
-                        </p>
-                      ) : null}
-                      <p className="text-sm leading-7 text-[var(--ink-soft)]">{reply.content}</p>
-                      {canReply ? (
-                        <details className="comment-thread-reply-box mt-4 rounded-[1rem] border border-dashed border-black/10 p-3">
-                          <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent-strong)]">
-                            Reply to {reply.author.name}
-                          </summary>
-                          <div className="mt-3">
-                            <CommentComposer
-                              postId={postId}
-                              postSlug={postSlug}
-                              parentId={reply.id}
-                              label={`Reply to ${reply.author.name}`}
-                              submitLabel="Submit reply"
-                              placeholder="Add a thoughtful follow-up to this reply."
-                              websiteFieldId={`comment-website-${reply.id}`}
-                            />
-                          </div>
-                        </details>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-
-              {canReply ? (
-                <details className="comment-thread-reply-box mt-5 rounded-[1.2rem] border border-dashed border-black/10 p-4">
-                  <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent-strong)]">
-                    Reply to {comment.author.name}
-                  </summary>
-                  <div className="mt-4">
-                    <CommentComposer
-                      postId={postId}
-                      postSlug={postSlug}
-                      parentId={comment.id}
-                      label={`Reply to ${comment.author.name}`}
-                      submitLabel="Submit reply"
-                      placeholder="Add a thoughtful follow-up to this comment."
-                      websiteFieldId={`comment-website-${comment.id}`}
-                    />
-                  </div>
-                </details>
-              ) : null}
-            </article>
+              comment={comment}
+              postId={postId}
+              postSlug={postSlug}
+              currentUser={currentUser}
+              canReply={canReply}
+            />
           ))
         ) : (
-          <div className="comment-thread-empty rounded-[1.4rem] border border-dashed border-black/10 p-6 text-sm leading-7 text-[var(--ink-soft)]">
+          <div className="comment-thread-empty rounded-[1.4rem] border border-dashed border-black/10 bg-[var(--panel-soft)] p-6 text-sm leading-7 text-[var(--ink-soft)]">
             There are no comments yet. You can be the first one to join the discussion.
           </div>
         )}
       </div>
 
-      {currentUser ? (
-        muted ? (
-          <div className="rounded-[1.4rem] border border-[rgba(168,123,53,0.22)] bg-[rgba(168,123,53,0.08)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
-            <p className="font-semibold text-[var(--ink)]">This account is muted</p>
-            <p className="mt-2">
-              {currentUser.mutedUntil
-                ? `Muted until: ${formatDate(currentUser.mutedUntil, "yyyy-MM-dd HH:mm")}`
-                : "Mute end time unavailable"}
+      {currentUser && muted ? (
+        <div className="rounded-[1.4rem] border border-[rgba(168,123,53,0.22)] bg-[rgba(168,123,53,0.08)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
+          <p className="font-semibold text-[var(--ink)]">This account is muted</p>
+          <p className="mt-2">
+            {currentUser.mutedUntil
+              ? `Muted until: ${formatDate(currentUser.mutedUntil, "yyyy-MM-dd HH:mm")}`
+              : "Mute end time unavailable"}
+          </p>
+          {currentUser.muteReason ? <p>Reason: {currentUser.muteReason}</p> : null}
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "rounded-[1.4rem] border border-black/8 p-5",
+            currentUser ? "bg-[var(--panel-soft)]" : "bg-[var(--panel-soft)]",
+          )}
+        >
+          <div className="mb-4 space-y-2">
+            <p className="text-sm font-semibold text-[var(--ink)]">
+              {currentUser ? "Leave a reply as admin" : "Leave a guest comment"}
             </p>
-            {currentUser.muteReason ? <p>Reason: {currentUser.muteReason}</p> : null}
+            <p className="text-sm leading-7 text-[var(--ink-soft)]">
+              {currentUser
+                ? "Admin replies publish immediately, but the same anti-spam checks still apply."
+                : "Share a thoughtful question or viewpoint. Clean comments can go live immediately, while risky ones wait for admin review."}
+            </p>
           </div>
-        ) : (
+
           <CommentComposer
             postId={postId}
             postSlug={postSlug}
-            label="Leave a comment"
+            currentUser={currentUser}
             submitLabel="Submit comment"
             placeholder="Share a question, a viewpoint, or a useful follow-up."
             websiteFieldId={`comment-website-${postId}`}
           />
-        )
-      ) : (
-        <div className="comment-thread-signin rounded-[1.4rem] border border-black/8 p-5 text-sm leading-7 text-[var(--ink-soft)]">
-          Sign in to leave a comment and join the discussion.
-          <Link
-            href={`/login?next=/blog/${postSlug}`}
-            className="ml-2 inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)]"
-          >
-            <MessageSquareMore className="h-4 w-4" />
-            Sign in
-          </Link>
         </div>
       )}
     </section>

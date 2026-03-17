@@ -1,40 +1,56 @@
 import Link from "next/link";
-import { AuthForm } from "@/components/forms/auth-form";
+import { LockKeyhole, MessageSquareMore } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function RegisterPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ notice?: string }>;
-}) {
-  const params = await searchParams;
-
+export default function RegisterPage() {
   return (
     <div className="container-shell grid min-h-[calc(100vh-9rem)] gap-8 py-16 lg:grid-cols-[0.95fr_0.85fr] lg:items-center">
       <section className="space-y-6">
-        <p className="section-kicker">Register</p>
+        <p className="section-kicker">Registration Closed</p>
         <h1 className="font-serif text-[clamp(2.5rem,5vw,4.6rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
-          Create a reader account to join discussions.
+          This site no longer uses public reader accounts.
         </h1>
         <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
-          Readers can register and comment on posts. New accounts must verify their email first, and reader comments still enter moderation so discussions stay constructive.
+          The blog now follows a simpler model: readers browse content freely and can leave guest
+          comments without signing up. Only the site administrator can sign in.
         </p>
-        {params.notice === "verify-email" ? (
-          <div className="rounded-[1.6rem] border border-emerald-200 bg-emerald-50 p-5 text-sm leading-7 text-emerald-700">
-            Account created. Please check your email and open the verification link before signing in.
-          </div>
-        ) : null}
       </section>
 
-      <div className="space-y-4">
-        <AuthForm mode="register" nextPath="/" />
-        <p className="text-sm text-[var(--ink-soft)]">
-          Already have an account?
-          <Link href="/login" className="ml-2 font-semibold text-[var(--accent-strong)]">
-            Sign in
+      <div className="space-y-4 rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
+        <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.7)] p-5">
+          <div className="flex items-start gap-3">
+            <MessageSquareMore className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+            <div>
+              <h2 className="font-serif text-2xl font-semibold tracking-tight">Guest comments</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
+                You can still join the discussion directly under each post with a name and an
+                optional email address.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.7)] p-5">
+          <div className="flex items-start gap-3">
+            <LockKeyhole className="mt-0.5 h-5 w-5 text-[var(--accent)]" />
+            <div>
+              <h2 className="font-serif text-2xl font-semibold tracking-tight">Admin access</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
+                If you are the site owner, use the admin login instead of creating a new account.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Link href="/login" className="btn-primary">
+            Admin login
           </Link>
-        </p>
+          <Link href="/" className="btn-secondary">
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );

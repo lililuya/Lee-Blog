@@ -420,19 +420,24 @@ model Comment {
   status            CommentStatus @default(PENDING)
   moderationNotes   String?       @db.Text
   moderationMatches String[]      @default([])
+  guestName         String?
+  guestEmail        String?
+  submittedIpHash   String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   postId            String
-  authorId          String
+  authorId          String?
   parentId          String?
   post              Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author            User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author            User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
   parent            Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies           Comment[]     @relation("CommentReplies")
 
   @@index([postId, status, createdAt(sort: Desc)])
   @@index([authorId])
   @@index([parentId])
+  @@index([guestEmail])
+  @@index([submittedIpHash, createdAt(sort: Desc)])
 }
 
 model CommentModerationRule {

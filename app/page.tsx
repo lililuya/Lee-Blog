@@ -34,7 +34,6 @@ import {
 import { CategoryLinkPill } from "@/components/site/category-link-pill";
 import { TagLinkPill } from "@/components/site/tag-link-pill";
 import { AvatarBadge } from "@/components/ui/avatar-badge";
-import { getCurrentUser } from "@/lib/auth";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -160,7 +159,6 @@ function buildRecentUpdates(args: {
 
 export default async function HomePage() {
   const [
-    currentUser,
     profile,
     siteOwner,
     pinnedPosts,
@@ -172,7 +170,6 @@ export default async function HomePage() {
     popularTags,
     recentComments,
   ] = await Promise.all([
-    getCurrentUser(),
     getSiteProfile(),
     getSiteOwnerIdentity(),
     getPinnedPosts(1),
@@ -420,12 +417,6 @@ export default async function HomePage() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              {currentUser ? (
-                <Link href="/account" className="btn-secondary">
-                  <UserRound className="h-4 w-4" />
-                  Account
-                </Link>
-              ) : null}
               {profile.websiteUrl ? (
                 <Link
                   href={profile.websiteUrl}
@@ -520,7 +511,16 @@ export default async function HomePage() {
                     className="home-sidebar-card rounded-[1.35rem] p-4"
                   >
                     <div className="flex items-center justify-between gap-3 text-xs text-[var(--ink-soft)]">
-                      <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
+                      <span className="font-semibold text-[var(--ink)]">
+                        {comment.author.name}
+                        <span className="ml-2 text-[var(--ink-soft)]">
+                          {comment.author.isAdmin
+                            ? "Admin"
+                            : comment.author.isGuest
+                              ? "Guest"
+                              : "Member"}
+                        </span>
+                      </span>
                       <span>{formatDate(comment.createdAt, "MM-dd")}</span>
                     </div>
                     <p className="mt-3 line-clamp-3 text-sm leading-7 text-[var(--ink-soft)]">

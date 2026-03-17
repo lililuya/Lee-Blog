@@ -29,7 +29,7 @@ type NotificationListOptions = {
 };
 
 type CommentActorInput = {
-  id: string;
+  id?: string | null;
   name: string;
 };
 

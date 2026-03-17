@@ -52,36 +52,6 @@ async function main() {
     },
   });
 
-  const reader = await prisma.user.upsert({
-    where: { email: "2643233154@qq.com" },
-    update: {
-      name: "读者评论",
-      status: UserStatus.ACTIVE,
-      emailVerifiedAt: new Date(),
-      emailVerificationRequired: false,
-      emailPostNotifications: true,
-      emailCommentNotifications: true,
-      inAppCommentNotifications: true,
-      mutedUntil: null,
-      muteReason: null,
-      statusReason: null,
-      deletedAt: null,
-      passwordHash: await hash("ReaderDemo123!", 12),
-    },
-    create: {
-      name: "读者评论",
-      email: "2643233154@qq.com",
-      role: UserRole.READER,
-      status: UserStatus.ACTIVE,
-      emailVerifiedAt: new Date(),
-      emailVerificationRequired: false,
-      emailPostNotifications: true,
-      emailCommentNotifications: true,
-      inAppCommentNotifications: true,
-      passwordHash: await hash("ReaderDemo123!", 12),
-    },
-  });
-
   await prisma.siteProfile.upsert({
     where: { id: "main" },
     update: {
@@ -389,7 +359,8 @@ async function main() {
   const seededTopLevelComment = await prisma.comment.create({
     data: {
       postId: firstPost.id,
-      authorId: reader.id,
+      guestName: "李文",
+      guestEmail: "2643233154@qq.com",
       status: "APPROVED",
       content:
         "AI运行过程中的中间状态特别有用，它使得AI的工作流程变得可观察、可检查，而不像是一个神秘的“黑箱”",

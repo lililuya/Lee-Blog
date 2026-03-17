@@ -1,29 +1,12 @@
 import { NextResponse } from "next/server";
-import { isAuthFlowError } from "@/lib/auth-errors";
-import { registerWithCredentials } from "@/lib/auth-service";
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const result = await registerWithCredentials(body);
-    return NextResponse.json({ ok: true, ...result }, { status: 201 });
-  } catch (error) {
-    if (isAuthFlowError(error)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-          code: error.code,
-          ...error.details,
-        },
-        { status: error.status },
-      );
-    }
-
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Registration failed." },
-      { status: 400 },
-    );
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "Public registration is closed. Guests can comment without creating an account.",
+      code: "PUBLIC_REGISTRATION_DISABLED",
+    },
+    { status: 403 },
+  );
 }
-

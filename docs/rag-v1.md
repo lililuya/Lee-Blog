@@ -14,9 +14,9 @@ So v1 deliberately used a simple and maintainable strategy: lexical retrieval.
 
 ## 2. Request flow
 
-1. The user sends a message from the chat widget.
+1. A visitor sends a message from the chat widget.
 2. The frontend posts the message history, provider, and current pathname to `/api/chat`.
-3. `app/api/chat/route.ts` validates the request and authentication state.
+3. `app/api/chat/route.ts` validates the request and any relevant admin session state.
 4. `lib/chat/orchestrator.ts` coordinates retrieval and model calling.
 5. `lib/chat/retrieval.ts` gathers candidate site sources.
 6. `lib/llm.ts` sends the final prompt to the chosen model.
@@ -32,12 +32,12 @@ Public sources:
 - daily papers
 - weekly digests
 
-Signed-in private sources:
+Admin-private sources:
 
 - paper library items
 - paper annotations
 
-Private sources are filtered by the current user.
+Private sources are filtered to the signed-in admin account only.
 
 ## 4. Current-page bias
 
@@ -47,7 +47,7 @@ v1 already supported strong current-page grounding for:
 - `/notes/[slug]`
 - `/digest/[slug]`
 
-This made the chat experience far better for readers asking questions while viewing a specific page.
+This made the chat experience much better for page-specific questions while someone was actively reading a document.
 
 ## 5. Why v1 still matters
 
