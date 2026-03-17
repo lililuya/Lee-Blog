@@ -15,7 +15,6 @@ import {
   notifyUserOfNewLogin,
   recordLoginAttempt,
 } from "@/lib/auth-security";
-import { issueEmailVerificationForUser } from "@/lib/email-verification";
 import { requestPasswordReset, resetPasswordWithToken } from "@/lib/password-reset";
 import {
   createTwoFactorChallengeToken,
@@ -29,7 +28,6 @@ import {
   twoFactorTokenSchema,
   forgotPasswordSchema,
   loginSchema,
-  registerSchema,
   resetPasswordSchema,
 } from "@/lib/validators";
 
@@ -231,6 +229,20 @@ export async function loginWithCredentials(
       succeeded: false,
     });
     throw new Error(accountStateMessage);
+  }
+
+  if (user.role !== UserRole.ADMIN) {
+    await recordLoginAttempt({
+      email,
+      ipHash: securityContext.ipHash,
+      userAgent: securityContext.userAgent,
+      succeeded: false,
+    });
+    throw new AuthFlowError({
+      code: "ADMIN_ONLY_SIGN_IN",
+      message: "Public sign-in is closed. Only the site administrator can sign in here.",
+      status: 403,
+    });
   }
 
   if (user.emailVerificationRequired && !user.emailVerifiedAt) {
@@ -477,63 +489,13 @@ export async function clearLoginTwoFactorChallenge(challengeToken: string | null
 }
 
 export async function registerWithCredentials(payload: unknown) {
-  if (!isDatabaseConfigured()) {
-    throw new Error("DATABASE_URL is not configured.");
-  }
+  void payload;
 
-  const parsed = registerSchema.parse(payload);
-  const email = parsed.email.toLowerCase();
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-
-  if (existing) {
-    if (existing.emailVerificationRequired && !existing.emailVerifiedAt) {
-      const verification = await issueEmailVerificationForUser({
-        id: existing.id,
-        name: existing.name,
-        email: existing.email,
-      });
-
-      return {
-        requiresEmailVerification: true,
-        email: existing.email,
-        resent: true,
-        emailSent: verification.emailSent,
-        verificationUrl: verification.verificationUrl,
-      };
-    }
-
-    throw new AuthFlowError({
-      code: "EMAIL_ALREADY_REGISTERED",
-      message: "This email is already registered.",
-    });
-  }
-
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.name,
-      email,
-      passwordHash: await hashPassword(parsed.password),
-      role: UserRole.READER,
-      status: UserStatus.ACTIVE,
-      emailVerifiedAt: null,
-      emailVerificationRequired: true,
-    },
+  throw new AuthFlowError({
+    code: "PUBLIC_REGISTRATION_DISABLED",
+    message: "Public registration is closed. Guests can comment without creating an account.",
+    status: 403,
   });
-
-  const verification = await issueEmailVerificationForUser({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-  });
-
-  return {
-    email: user.email,
-    requiresEmailVerification: true,
-    resent: false,
-    emailSent: verification.emailSent,
-    verificationUrl: verification.verificationUrl,
-  };
 }
 
 export async function logoutSession() {

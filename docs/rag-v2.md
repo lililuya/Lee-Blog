@@ -29,7 +29,7 @@ The core persisted unit is the RAG knowledge chunk, which stores:
 This supports both:
 
 - public site knowledge
-- user-private research knowledge
+- admin-private research knowledge
 
 ## 3. Sync path
 
@@ -59,7 +59,7 @@ At query time, the system combines:
 - current-page context
 - semantic candidates
 - public lexical candidates
-- private lexical candidates
+- admin-private lexical candidates
 
 It then deduplicates, fuses scores, trims results, and sends grounded context to the model.
 
@@ -100,7 +100,7 @@ The multimodal slot is reserved for future expansion and is not the mainline pro
 The current implementation is intentionally practical:
 
 - sync is still manual-first
-- ingestion is focused on site and personal research content
+- ingestion is focused on site content and private admin research material
 - multimodal ingestion is not complete yet
 - the system prioritizes maintainability over maximal complexity
 

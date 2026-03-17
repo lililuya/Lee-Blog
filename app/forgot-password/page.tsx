@@ -14,7 +14,8 @@ export default function ForgotPasswordPage() {
           Reset your password.
         </h1>
         <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
-          Enter the email address you used to register. If the account exists, we will prepare a reset link.
+          Enter the administrator email address. If the account exists, we will prepare a reset
+          link.
         </p>
         {!isDatabaseConfigured() ? (
           <div className="rounded-[1.6rem] border border-dashed border-[rgba(168,123,53,0.4)] bg-[rgba(168,123,53,0.08)] p-5 text-sm leading-7 text-[var(--ink-soft)]">

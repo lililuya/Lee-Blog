@@ -7,8 +7,8 @@ This document summarizes the current route map, HTTP endpoints, and major Server
 The application currently has five route families:
 
 - public publishing routes
-- account and authentication routes
-- admin routes
+- admin sign-in and private workspace routes
+- admin console routes
 - system output routes
 - HTTP API routes
 
@@ -40,19 +40,16 @@ The application currently has five route families:
 - `/digest/[slug]` - digest detail
 - `/tools` - AI utilities and request validation entry
 
-### Signed-in user pages
+## 3. Admin sign-in and private workspace routes
 
-- `/papers/library` - personal paper library
-- `/account` - account settings
-- `/account/notifications` - in-app notifications center
-
-## 3. Authentication routes
-
-- `/login` - sign-in page
-- `/register` - sign-up page
+- `/login` - admin sign-in page
+- `/register` - registration-closed information page
 - `/forgot-password` - password reset request
 - `/reset-password` - password reset completion
-- `/verify-email` - email verification landing page
+- `/verify-email` - admin email verification landing page
+- `/account` - admin account, security, and preference page
+- `/account/notifications` - private admin inbox
+- `/papers/library` - private admin paper library
 
 ## 4. Admin routes
 
@@ -67,11 +64,11 @@ All `/admin/*` routes require an admin session.
 - `/admin/profile` - site profile editor
 - `/admin/rag` - RAG management console
 
-### Moderation and users
+### Moderation and management
 
 - `/admin/comments` - moderation queue and review history
 - `/admin/comments/rules` - moderation rule management
-- `/admin/users` - user list
+- `/admin/users` - user/session list for legacy records and controls
 - `/admin/users/[id]` - user detail and controls
 
 ### Content management
@@ -111,19 +108,19 @@ All `/admin/*` routes require an admin session.
 
 ## 6. HTTP API endpoints
 
-## 6.1 Auth endpoints
+### 6.1 Auth endpoints
 
 - `POST /api/auth/login` - sign in with email and password
-- `POST /api/auth/logout` - destroy session
-- `POST /api/auth/register` - create a reader account
-- `POST /api/auth/forgot-password` - request reset email
+- `POST /api/auth/logout` - destroy the current session
+- `POST /api/auth/register` - returns `403` because public registration is closed
+- `POST /api/auth/forgot-password` - request a reset email
 - `POST /api/auth/reset-password` - complete password reset
-- `POST /api/auth/resend-verification` - send verification email again
+- `POST /api/auth/resend-verification` - send admin verification email again
 - `POST /api/auth/verify-email` - consume verification token
 - `POST /api/auth/2fa/verify` - verify admin 2FA challenge
 - `POST /api/auth/2fa/cancel` - cancel pending 2FA challenge
 
-## 6.2 App endpoints
+### 6.2 App endpoints
 
 - `POST /api/chat` - send chat requests to the selected provider, with page context and RAG support
 - `POST /api/chat/transcribe` - validate and execute speech-to-text requests through the selected transcription provider
@@ -152,7 +149,8 @@ Many important write flows use Server Actions instead of public HTTP APIs.
 - gallery create/update/delete
 - scheduled publishing fields
 - revision restore
-- comment create, moderate, and delete
+- guest/admin comment create
+- comment moderate and delete
 
 ### Research actions
 
@@ -163,18 +161,19 @@ Many important write flows use Server Actions instead of public HTTP APIs.
 
 ### Admin actions
 
-- user role and status changes
-- mute / suspend / restore flows
 - moderation rule CRUD
 - export and audit-linked actions
+- user/session management helpers for retained admin tools
 
 ## 8. Access model notes
 
 - public publishing routes are readable without login
-- commenting requires a signed-in user and may additionally require verified email
-- `/papers/library`, `/account`, and `/account/notifications` require login
+- comments can be submitted by guests or by the signed-in admin
+- guest comments require a name, while guest email remains optional
+- `/register` is not a live signup flow anymore
+- `/account`, `/account/notifications`, and `/papers/library` are private admin workspace routes
 - `/admin/*` requires `ADMIN`
-- some API routes are admin-only or login-gated even though they are HTTP endpoints
+- some API routes are admin-only even though they are exposed as HTTP endpoints
 
 ## 9. Suggested companion docs
 

@@ -22,9 +22,9 @@ export function SiteHeader({ currentUser, unreadNotificationCount }: SiteHeaderP
             </div>
 
             {!currentUser ? (
-              <Link href="/login" className="btn-primary">
+              <Link href="/login" className="btn-secondary">
                 <LogIn className="h-4 w-4" />
-                Sign In
+                Admin Login
               </Link>
             ) : null}
           </div>

@@ -209,14 +209,11 @@ export const demoComments = [
     createdAt: new Date("2026-03-09T09:30:00.000Z"),
     updatedAt: new Date("2026-03-09T09:30:00.000Z"),
     postId: "demo-post-1",
-    authorId: "demo-reader",
+    authorId: null,
     parentId: null,
-    author: {
-      id: "demo-reader",
-      name: "Reader Demo",
-      email: "reader@example.com",
-      role: "READER",
-    },
+    guestName: "Guest Reader",
+    guestEmail: "guest@example.com",
+    author: null,
   },
   {
     id: "demo-comment-2",

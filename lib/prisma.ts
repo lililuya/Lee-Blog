@@ -31,6 +31,10 @@ function hasDelegate(client: PrismaClient, delegate: string) {
   return prismaRecord[delegate] !== undefined;
 }
 
+function getCommentModel() {
+  return Prisma.dmmf.datamodel.models.find((model) => model.name === "Comment");
+}
+
 function createClient() {
   if (!process.env.DATABASE_URL) {
     return {} as PrismaClient;
@@ -55,8 +59,19 @@ function createClient() {
 }
 
 export function hasCommentReplySupport() {
-  const commentModel = Prisma.dmmf.datamodel.models.find((model) => model.name === "Comment");
+  const commentModel = getCommentModel();
   return commentModel?.fields.some((field) => field.name === "parentId") ?? false;
+}
+
+export function hasCommentGuestIdentitySupport() {
+  const commentModel = getCommentModel();
+  const fieldNames = new Set(commentModel?.fields.map((field) => field.name) ?? []);
+  return fieldNames.has("guestName") && fieldNames.has("guestEmail");
+}
+
+export function hasCommentGuestFingerprintSupport() {
+  const commentModel = getCommentModel();
+  return commentModel?.fields.some((field) => field.name === "submittedIpHash") ?? false;
 }
 
 export function hasSiteProfileBackgroundMediaModeSupport() {

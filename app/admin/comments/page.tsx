@@ -38,9 +38,26 @@ export default async function AdminCommentsPage() {
                   <div className="text-sm text-[var(--ink-soft)]">
                     <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
                     <span className="mx-2">/</span>
-                    <span>{comment.author.email}</span>
+                    <span>
+                      {comment.author.email ?? (comment.author.isGuest ? "Guest email not provided" : "No email")}
+                    </span>
                     <span className="mx-2">/</span>
                     <span>{formatDate(comment.createdAt, "yyyy-MM-dd HH:mm")}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
+                    {comment.author.isAdmin ? (
+                      <span className="rounded-full bg-[rgba(27,107,99,0.12)] px-3 py-1 text-[var(--accent-strong)]">
+                        Admin
+                      </span>
+                    ) : comment.author.isGuest ? (
+                      <span className="rounded-full bg-black/5 px-3 py-1 text-[var(--ink-soft)]">
+                        Guest
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-black/5 px-3 py-1 text-[var(--ink-soft)]">
+                        Member
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm font-semibold text-[var(--accent-strong)]">
                     Post: {comment.post.title}
@@ -50,11 +67,8 @@ export default async function AdminCommentsPage() {
                       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
                         Reply Context
                       </div>
-                      <p className="mt-2">
-                        Reply to{" "}
-                        <span className="font-semibold text-[var(--ink)]">
-                          {comment.parent.author.name}
-                        </span>
+                      <p className="mt-2 text-xs font-medium text-[var(--ink-soft)]">
+                        @{comment.parent.author.name}
                       </p>
                       <p className="mt-1 break-words">{comment.parent.content}</p>
                     </div>

@@ -41,14 +41,21 @@ For Prisma schema updates:
 2. run `npm run db:push`
 3. restart `npm run dev` if behavior looks stale
 
-### Account or notification flow change
+### Auth, moderation, or notification flow change
 
-For auth, moderation, notification, or provider logic:
+For admin auth, guest comments, moderation rules, notifications, or provider logic:
 
 1. update server code
 2. validate the relevant route or API flow
 3. run `npm run lint`
 4. run `npm run build` before release
+
+Typical examples:
+
+- after changing admin sign-in, test `/login`
+- after changing guest comments, submit a real guest comment
+- after changing moderation rules, review one item in `/admin/comments`
+- after changing the inbox flow, open `/account/notifications` as the admin
 
 ## 3. Recommended pre-release checklist
 

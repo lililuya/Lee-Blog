@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
-import { UserStatus } from "@prisma/client";
+import { UserRole, UserStatus } from "@prisma/client";
 import { AuthFlowError } from "@/lib/auth-errors";
 import { hashPassword } from "@/lib/auth";
 import { sendSiteEmail } from "@/lib/email";
@@ -130,7 +130,7 @@ export async function requestPasswordReset(email: string) {
     where: { email: normalizedEmail },
   });
 
-  if (!user || user.status === UserStatus.DELETED) {
+  if (!user || user.status === UserStatus.DELETED || user.role !== UserRole.ADMIN) {
     return {
       requested: true,
       emailSent: false,
@@ -170,6 +170,7 @@ export async function inspectPasswordResetToken(token: string) {
       user: {
         select: {
           email: true,
+          role: true,
         },
       },
     },
@@ -186,8 +187,16 @@ export async function inspectPasswordResetToken(token: string) {
   if (record.expiresAt < new Date()) {
     return {
       status: "expired" as const,
-      email: record.user.email,
+      email: record.user.role === UserRole.ADMIN ? record.user.email : null,
       expiresAt: record.expiresAt,
+    };
+  }
+
+  if (record.user.role !== UserRole.ADMIN) {
+    return {
+      status: "invalid" as const,
+      email: null,
+      expiresAt: null,
     };
   }
 
@@ -244,6 +253,17 @@ export async function resetPasswordWithToken(token: string, password: string) {
     throw new AuthFlowError({
       code: "PASSWORD_RESET_INVALID",
       message: "This account is no longer available.",
+    });
+  }
+
+  if (resetToken.user.role !== UserRole.ADMIN) {
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: resetToken.userId },
+    });
+
+    throw new AuthFlowError({
+      code: "PASSWORD_RESET_INVALID",
+      message: "This password reset link is no longer valid.",
     });
   }
 

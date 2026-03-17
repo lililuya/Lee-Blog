@@ -21,7 +21,7 @@ type CommentNotificationPost = {
 
 type CommentNotificationAuthor = {
   name: string;
-  email: string;
+  email?: string | null;
 };
 
 type CommentReplyContext = {
@@ -42,6 +42,11 @@ function escapeHtml(value: string) {
 function getCommentExcerpt(content: string, maxLength = 220) {
   const normalized = content.replace(/\s+/g, " ").trim();
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}...` : normalized;
+}
+
+function formatAuthorLabel(author: CommentNotificationAuthor) {
+  const email = author.email?.trim();
+  return email ? `${author.name} <${email}>` : author.name;
 }
 
 async function isCommentEmailEnabledForUser(userId: string | null | undefined) {
@@ -138,10 +143,10 @@ export async function notifyAdminsOfNewComment(input: {
     input.replyTo ? "A new reply was submitted on the site." : "A new comment was submitted on the site.",
     "",
     `Post: ${input.post.title}`,
-    `Author: ${input.author.name} <${input.author.email}>`,
+    `Author: ${formatAuthorLabel(input.author)}`,
     `Status: ${buildStatusLabel(input.comment.status)}`,
     `Submitted at: ${input.comment.createdAt.toISOString()}`,
-    input.replyTo ? `Replying to: ${input.replyTo.author.name} <${input.replyTo.author.email}>` : null,
+    input.replyTo ? `Replying to: ${formatAuthorLabel(input.replyTo.author)}` : null,
     "",
     input.replyTo && replyExcerpt ? `Original comment: ${replyExcerpt}` : null,
     input.replyTo ? "" : null,
@@ -163,12 +168,12 @@ export async function notifyAdminsOfNewComment(input: {
     <div style="font-family:Arial,sans-serif;line-height:1.7;color:#14212b;">
       <p>${escapeHtml(input.replyTo ? "A new reply was submitted on the site." : "A new comment was submitted on the site.")}</p>
       <p><strong>Post:</strong> ${escapeHtml(input.post.title)}<br />
-      <strong>Author:</strong> ${escapeHtml(input.author.name)} &lt;${escapeHtml(input.author.email)}&gt;<br />
+      <strong>Author:</strong> ${escapeHtml(formatAuthorLabel(input.author))}<br />
       <strong>Status:</strong> ${escapeHtml(buildStatusLabel(input.comment.status))}<br />
       <strong>Submitted at:</strong> ${escapeHtml(input.comment.createdAt.toISOString())}<br />
       ${
         input.replyTo
-          ? `<strong>Replying to:</strong> ${escapeHtml(input.replyTo.author.name)} &lt;${escapeHtml(input.replyTo.author.email)}&gt;`
+          ? `<strong>Replying to:</strong> ${escapeHtml(formatAuthorLabel(input.replyTo.author))}`
           : ""
       }</p>
       ${
@@ -213,8 +218,8 @@ export async function notifyAuthorOfCommentReply(input: {
   reply: Pick<CommentNotificationComment, "id" | "content">;
   recipientUserId?: string | null;
 }) {
-  const recipient = input.recipient.email.trim().toLowerCase();
-  const replierEmail = input.replier.email.trim().toLowerCase();
+  const recipient = input.recipient.email?.trim().toLowerCase() ?? "";
+  const replierEmail = input.replier.email?.trim().toLowerCase() ?? "";
 
   if (!recipient) {
     return {
@@ -289,7 +294,7 @@ export async function notifyAuthorOfCommentReview(input: {
   author: CommentNotificationAuthor;
   authorUserId?: string | null;
 }) {
-  const recipient = input.author.email.trim().toLowerCase();
+  const recipient = input.author.email?.trim().toLowerCase() ?? "";
 
   if (!recipient) {
     return {

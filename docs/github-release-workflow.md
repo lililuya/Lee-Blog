@@ -2,7 +2,7 @@
 
 This guide is a practical runbook for managing this repository on GitHub after local development is complete.
 
-## 1. Current branch model in this project
+## 1. Current branch model
 
 At the current stage, this repository typically uses:
 
@@ -12,9 +12,9 @@ At the current stage, this repository typically uses:
 Examples:
 
 - `codex/rag`
-- `codex/release-docs-refresh-20260315`
+- `codex/release-docs-refresh-20260318`
 
-For large changes, it is completely acceptable to treat one branch as a milestone snapshot instead of trying to split dozens of tiny commits retroactively.
+For large changes, it is fine to treat one branch as a milestone snapshot instead of retroactively splitting it into many tiny commits.
 
 ## 2. Recommended local workflow
 
@@ -62,13 +62,8 @@ If you intentionally need uploaded files in version control, add `public/uploads
 
 Use these rules:
 
-- If `main` does not yet contain the previous milestone, open the next PR against the previous milestone branch first.
+- If `main` does not yet contain the previous milestone, open the next PR against that previous milestone branch first.
 - If `main` already contains the previous milestone, open the PR directly against `main`.
-
-Example:
-
-1. `codex/rag -> main`
-2. `codex/release-docs-refresh-20260315 -> main`
 
 This keeps the PR diff focused and easier to review.
 
@@ -80,19 +75,20 @@ This keeps the PR diff focused and easier to review.
 4. Review file changes and commit summaries.
 5. Merge only after CI passes.
 
-Suggested PR structure:
+Suggested PR body structure:
 
-- title: a short milestone summary
-- body: what changed, how it was tested, and any deployment notes
+- what changed
+- how it was tested
+- whether deployment needs extra secrets, env updates, or data migration
 
 ## 5. GitHub Actions in this repository
 
 Current workflows:
 
-- `CI`: validates install, database push, seed, lint, and build
-- `Deploy`: builds the image, pushes to GHCR, then deploys to the server over SSH
-- `Daily Papers Sync`: triggers paper sync on the server
-- `Weekly Digest`: triggers digest generation on the server
+- `CI` - validates install, database push, seed, lint, and build
+- `Deploy` - builds the image, pushes to GHCR, then deploys to the server over SSH
+- `Daily Papers Sync` - triggers paper sync on the server
+- `Weekly Digest` - triggers digest generation on the server
 
 ## 6. Required GitHub Secrets
 
@@ -119,7 +115,7 @@ It should include at least:
 - `APP_URL`
 - `SESSION_SECRET`
 - seeded admin credentials
-- any SMTP settings you use
+- SMTP settings
 - AI provider keys
 - transcription provider settings
 - RAG embedding settings
@@ -143,20 +139,18 @@ The current deploy workflow is not a full zero-to-server bootstrap script.
 3. Upload `docker-compose.prod.yml`.
 4. Confirm the SSH user can run Docker.
 5. Merge to `main` or run `Deploy` manually.
-6. Verify the site, login, admin pages, and notifications.
+6. Verify the site, admin login, guest comments, moderation queue, and tools page.
 7. Trigger `Daily Papers Sync` manually once.
 8. Trigger `Weekly Digest` manually once if needed.
 
 ## 10. If Actions fail
-
-Use this quick diagnosis model:
 
 ### `CI` failed
 
 Usually means:
 
 - install failed
-- Prisma schema failed
+- Prisma schema or `db:push` failed
 - seed failed
 - lint failed
 - build failed
@@ -183,7 +177,7 @@ Usually means:
 
 ## 11. Suggested long-term workflow
 
-For this project, the most reliable ongoing process is:
+The most reliable ongoing process is:
 
 1. code locally
 2. validate locally
@@ -192,7 +186,8 @@ For this project, the most reliable ongoing process is:
 5. wait for CI
 6. merge to `main`
 7. let Deploy run
-8. monitor scheduled workflows
+8. verify admin login and comment moderation after release
+9. monitor scheduled workflows
 
 ## 12. Related docs
 

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { isAuthFlowError } from "@/lib/auth-errors";
-import { loginWithCredentials, logoutSession, registerWithCredentials } from "@/lib/auth-service";
+import { loginWithCredentials, logoutSession } from "@/lib/auth-service";
 
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -31,13 +31,8 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function registerAction(formData: FormData) {
-  await registerWithCredentials({
-    name: getString(formData, "name"),
-    email: getString(formData, "email"),
-    password: getString(formData, "password"),
-  });
-
-  redirect("/register?notice=verify-email");
+  void formData;
+  redirect("/login?error=registration-closed");
 }
 
 export async function logoutAction() {

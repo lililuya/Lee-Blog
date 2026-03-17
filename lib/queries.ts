@@ -5,6 +5,7 @@ import {
   UserStatus,
 } from "@prisma/client";
 import {
+  hasCommentGuestIdentitySupport,
   hasCommentReplySupport,
   hasSiteProfileBackgroundMediaModeSupport,
   prisma,
@@ -30,6 +31,7 @@ import {
   demoProviders,
   demoWeeklyDigests,
 } from "@/lib/demo-data";
+import { resolveCommentAuthorIdentity } from "@/lib/comment-identity";
 import { getDigestDate } from "@/lib/papers";
 import { recordSearchQuery } from "@/lib/site-analytics";
 import { buildFooterAnalytics, getDemoFooterAnalytics } from "@/lib/visitor-analytics";
@@ -69,12 +71,38 @@ type RecentComment = {
   createdAt: Date;
   author: {
     name: string;
+    email?: string | null;
     avatarUrl?: string | null;
+    isAdmin: boolean;
+    isGuest: boolean;
   };
   post: {
     title: string;
     slug: string;
   };
+};
+
+type ResolvedCommentAuthor = ReturnType<typeof resolveCommentAuthorIdentity>;
+
+type PublicCommentRecord = {
+  id: string;
+  content: string;
+  status: CommentStatus | string;
+  moderationNotes: string | null;
+  moderationMatches: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  postId: string;
+  authorId: string | null;
+  parentId: string | null;
+  guestName?: string | null;
+  guestEmail?: string | null;
+  author?: {
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+    role?: UserRole | string;
+  } | null;
 };
 
 type ArchiveEntry = {
@@ -481,6 +509,35 @@ function buildPublicSeriesDetailFromRecord(series: {
             ?.publishedAt ?? null
         : null,
     entries,
+  };
+}
+
+function mapCommentAuthor(input: {
+  guestName?: string | null;
+  guestEmail?: string | null;
+  author?: {
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+    role?: UserRole | string;
+  } | null;
+}): ResolvedCommentAuthor {
+  return resolveCommentAuthorIdentity({
+    guestName: input.guestName,
+    guestEmail: input.guestEmail,
+    author: input.author
+      ? {
+          ...input.author,
+          role: input.author.role ?? null,
+        }
+      : null,
+  });
+}
+
+function mapPublicComment(comment: PublicCommentRecord) {
+  return {
+    ...comment,
+    author: mapCommentAuthor(comment),
   };
 }
 
@@ -1010,10 +1067,7 @@ export async function getRecentApprovedComments(limit = 5): Promise<RecentCommen
           id: comment.id,
           content: comment.content,
           createdAt: comment.createdAt,
-          author: {
-            name: comment.author.name,
-            avatarUrl: null,
-          },
+          author: mapCommentAuthor(comment),
           post: {
             title: post.title,
             slug: post.slug,
@@ -1027,7 +1081,50 @@ export async function getRecentApprovedComments(limit = 5): Promise<RecentCommen
   }
 
   const repliesSupported = hasCommentReplySupport();
+  const guestIdentitySupported = hasCommentGuestIdentitySupport();
   const cutoff = getPublishingCutoff();
+
+  const commentSelect = guestIdentitySupported
+    ? {
+        id: true,
+        content: true,
+        createdAt: true,
+        guestName: true,
+        guestEmail: true,
+        author: {
+          select: {
+            name: true,
+            email: true,
+            avatarUrl: true,
+            role: true,
+          },
+        },
+        post: {
+          select: {
+            title: true,
+            slug: true,
+          },
+        },
+      }
+    : {
+        id: true,
+        content: true,
+        createdAt: true,
+        author: {
+          select: {
+            name: true,
+            email: true,
+            avatarUrl: true,
+            role: true,
+          },
+        },
+        post: {
+          select: {
+            title: true,
+            slug: true,
+          },
+        },
+      };
 
   return prisma.comment.findMany({
     where: {
@@ -1035,28 +1132,17 @@ export async function getRecentApprovedComments(limit = 5): Promise<RecentCommen
       ...(repliesSupported ? { parentId: null } : {}),
       post: publicPostWhere(cutoff),
     },
-    select: {
-      id: true,
-      content: true,
-      createdAt: true,
-      author: {
-        select: {
-          name: true,
-          avatarUrl: true,
-        },
-      },
-      post: {
-        select: {
-          title: true,
-          slug: true,
-        },
-      },
-    },
+    select: commentSelect,
     orderBy: {
       createdAt: "desc",
     },
     take: limit,
-  });
+  }).then((comments) =>
+    comments.map((comment) => ({
+      ...comment,
+      author: mapCommentAuthor(comment),
+    })),
+  );
 }
 
 export async function getContentArchive(limitMonths?: number): Promise<ArchiveMonthGroup[]> {
@@ -1191,11 +1277,13 @@ export async function getPostBySlug(slug: string) {
         seriesOrder: null,
         comments: demoComments
           .filter((comment) => comment.postId === post.id && comment.status === CommentStatus.APPROVED)
-          .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime()),
+          .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+          .map((comment) => mapPublicComment(comment)),
     };
   }
 
   const repliesSupported = hasCommentReplySupport();
+  const guestIdentitySupported = hasCommentGuestIdentitySupport();
   const cutoff = getPublishingCutoff();
 
   if (!repliesSupported) {
@@ -1210,9 +1298,9 @@ export async function getPostBySlug(slug: string) {
           comments: {
             where: { status: CommentStatus.APPROVED },
             include: { author: true },
-          orderBy: { createdAt: "asc" },
+            orderBy: { createdAt: "asc" },
+          },
         },
-      },
     });
 
     if (!post) {
@@ -1221,10 +1309,16 @@ export async function getPostBySlug(slug: string) {
 
     return {
       ...post,
-      comments: post.comments.map((comment) => ({
-        ...comment,
-        parentId: null,
-      })),
+      comments: post.comments.map((comment) =>
+        mapPublicComment({
+          ...comment,
+          status: comment.status,
+          moderationNotes: comment.moderationNotes,
+          moderationMatches: comment.moderationMatches,
+          authorId: comment.authorId,
+          parentId: null,
+        }),
+      ),
     };
   }
 
@@ -1238,23 +1332,60 @@ export async function getPostBySlug(slug: string) {
         series: true,
         comments: {
           where: { status: CommentStatus.APPROVED },
-          select: {
-          id: true,
-          content: true,
-          status: true,
-          moderationNotes: true,
-          moderationMatches: true,
-          createdAt: true,
-          updatedAt: true,
-          postId: true,
-          authorId: true,
-          parentId: true,
-          author: true,
+          select: guestIdentitySupported
+            ? {
+                id: true,
+                content: true,
+                status: true,
+                moderationNotes: true,
+                moderationMatches: true,
+                createdAt: true,
+                updatedAt: true,
+                postId: true,
+                authorId: true,
+                parentId: true,
+                guestName: true,
+                guestEmail: true,
+                author: {
+                  select: {
+                    name: true,
+                    email: true,
+                    avatarUrl: true,
+                    role: true,
+                  },
+                },
+              }
+            : {
+                id: true,
+                content: true,
+                status: true,
+                moderationNotes: true,
+                moderationMatches: true,
+                createdAt: true,
+                updatedAt: true,
+                postId: true,
+                authorId: true,
+                parentId: true,
+                author: {
+                  select: {
+                    name: true,
+                    email: true,
+                    avatarUrl: true,
+                    role: true,
+                  },
+                },
+              },
+          orderBy: { createdAt: "asc" },
         },
-        orderBy: { createdAt: "asc" },
       },
-    },
-  });
+  }).then((post) =>
+    post
+      ? {
+          ...post,
+          comments: post.comments.map((comment) => mapPublicComment(comment)),
+        }
+      : null,
+  );
 }
 
 export async function getNoteBySlug(slug: string) {
@@ -1756,6 +1887,7 @@ export async function getAdminComments() {
   }
 
   const repliesSupported = hasCommentReplySupport();
+  const guestIdentitySupported = hasCommentGuestIdentitySupport();
 
   if (!repliesSupported) {
     const comments = await prisma.comment.findMany({
@@ -1765,6 +1897,7 @@ export async function getAdminComments() {
 
     return comments.map((comment) => ({
       ...comment,
+      author: mapCommentAuthor(comment),
       parent: null,
     }));
   }
@@ -1778,18 +1911,37 @@ export async function getAdminComments() {
           id: true,
           content: true,
           status: true,
+          authorId: true,
+          ...(guestIdentitySupported
+            ? {
+                guestName: true,
+                guestEmail: true,
+              }
+            : {}),
           author: {
             select: {
               id: true,
               name: true,
               email: true,
+              role: true,
             },
           },
         },
       },
     },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-  });
+  }).then((comments) =>
+    comments.map((comment) => ({
+      ...comment,
+      author: mapCommentAuthor(comment),
+      parent: comment.parent
+        ? {
+            ...comment.parent,
+            author: mapCommentAuthor(comment.parent),
+          }
+        : null,
+    })),
+  );
 }
 
 export async function getCommentModerationRules() {
@@ -2309,7 +2461,6 @@ export async function getSitemapEntries() {
     "/search",
     "/tags",
     "/login",
-    "/register",
   ];
 
   if (!isDatabaseConfigured()) {

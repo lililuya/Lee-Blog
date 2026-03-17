@@ -1,6 +1,6 @@
 # GitHub 发布与工作流说明
 
-这份文档是给这个仓库后续持续开发和发布时用的实操手册，重点覆盖分支、PR、GitHub Actions、Secrets 和部署准备。
+这份文档是给这个仓库后续持续开发和发布时使用的实操手册，重点覆盖分支、PR、GitHub Actions、Secrets 和部署准备。
 
 ## 1. 当前项目建议的分支模型
 
@@ -12,9 +12,9 @@
 例如：
 
 - `codex/rag`
-- `codex/release-docs-refresh-20260315`
+- `codex/release-docs-refresh-20260318`
 
-如果一次改动很大，完全可以把它当成一个“版本里程碑分支”，不必强行回头拆成很多很碎的小 commit。
+如果一次改动很大，完全可以把它当成一个“里程碑分支”，不必强行拆成很多很碎的小 commit。
 
 ## 2. 推荐本地开发流程
 
@@ -62,13 +62,8 @@ git push -u origin codex/your-feature-name
 
 规则很简单：
 
-- 如果 `main` 里还没有上一个版本里程碑，就先针对上一个版本链路来开 PR
-- 如果 `main` 已经合入上一个版本，就直接对 `main` 开 PR
-
-比如：
-
-1. `codex/rag -> main`
-2. `codex/release-docs-refresh-20260315 -> main`
+- 如果 `main` 里还没有上一版里程碑，就先针对上一版链路开 PR
+- 如果 `main` 已经合入上一版，就直接对 `main` 开 PR
 
 这样每个 PR 的 diff 会更清晰，也更容易 review。
 
@@ -80,17 +75,18 @@ git push -u origin codex/your-feature-name
 4. 检查变更文件和 commit 摘要
 5. CI 通过后再合并
 
-PR 建议写法：
+PR 描述建议至少写清楚：
 
-- 标题：一句话概括这个版本
-- 描述：写清楚改了什么、怎么验证的、上线前要注意什么
+- 改了什么
+- 本地怎么验证的
+- 是否需要补环境变量、Secrets 或数据结构同步
 
 ## 5. 这个仓库里的 GitHub Actions 分工
 
 当前主要 workflow：
 
 - `CI`
-  - 校验安装、数据库结构推送、seed、lint、build
+  - 校验安装、数据库推送、seed、lint、build
 - `Deploy`
   - 构建镜像、推到 GHCR，然后通过 SSH 到服务器部署
 - `Daily Papers Sync`
@@ -115,7 +111,7 @@ PR 建议写法：
 
 ## 7. `APP_ENV_FILE` 是什么
 
-`APP_ENV_FILE` 不是某一个变量，而是整份生产环境 `.env` 的完整内容，作为一个多行 secret 存在 GitHub 里。
+`APP_ENV_FILE` 不是单个变量，而是整份生产环境 `.env` 的完整内容，以一个多行 secret 的形式保存在 GitHub。
 
 里面至少应该包含：
 
@@ -123,20 +119,20 @@ PR 建议写法：
 - `APP_URL`
 - `SESSION_SECRET`
 - 初始化管理员账号
-- 你实际使用的 SMTP 配置
-- AI provider 的 key
+- SMTP 配置
+- AI provider key
 - 语音转写 provider 配置
 - RAG embedding 配置
 
-## 8. 服务器侧必须提前准备好的东西
+## 8. 服务器侧需要提前准备的内容
 
-在 `Deploy` 能成功之前，服务器至少要提前准备好：
+在 `Deploy` 能成功之前，服务器至少要准备好：
 
 - 已安装 Docker
 - 已安装 `docker compose`
 - 当前 SSH 用户可以执行 Docker
 - 目录 `/srv/scholar-blog-studio`
-- 该目录下已经存在 `docker-compose.prod.yml`
+- 该目录下已经有 `docker-compose.prod.yml`
 
 当前 deploy workflow 不是一套“从零开荒”的脚本，它默认这些基础条件已经满足。
 
@@ -147,7 +143,7 @@ PR 建议写法：
 3. 上传 `docker-compose.prod.yml`
 4. 确认 SSH 用户有 Docker 权限
 5. 合并到 `main` 或手动运行 `Deploy`
-6. 验证首页、登录、后台、通知等关键功能
+6. 验证首页、管理员登录、游客评论、评论审核和工具页
 7. 手动跑一次 `Daily Papers Sync`
 8. 如果需要，再手动跑一次 `Weekly Digest`
 
@@ -158,7 +154,7 @@ PR 建议写法：
 通常说明：
 
 - 安装失败
-- Prisma 结构失败
+- Prisma 结构或 `db:push` 失败
 - seed 失败
 - lint 失败
 - build 失败
@@ -185,7 +181,7 @@ PR 建议写法：
 
 ## 11. 建议长期固定流程
 
-对这个项目来说，最稳妥的长期流程就是：
+对这个项目来说，比较稳妥的长期流程就是：
 
 1. 本地开发
 2. 本地验证
@@ -193,8 +189,9 @@ PR 建议写法：
 4. 开 PR
 5. 等 CI 通过
 6. 合并到 `main`
-7. 让 Deploy 自动跑
-8. 观察定时任务
+7. 让 Deploy 自动执行
+8. 发布后检查管理员登录和评论审核链路
+9. 观察定时任务
 
 ## 12. 相关文档
 

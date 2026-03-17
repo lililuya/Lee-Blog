@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the current architecture of Scholar Blog Studio as of the latest integrated blog + research workspace build.
+This document describes the current architecture of Scholar Blog Studio.
 
 ## 1. Product shape
 
@@ -8,18 +8,19 @@ The project uses a single-repository integrated full-stack architecture.
 
 That means:
 
-- public pages, admin pages, APIs, and server actions live in one Next.js application
+- public pages, private admin pages, APIs, and Server Actions live in one Next.js application
 - Prisma provides one typed data layer for all product modules
-- business rules, validation, and permission checks are shared instead of duplicated
-- the app can evolve from a simple blog into a research workspace without splitting stacks too early
+- business rules, validation, moderation logic, and permission checks are shared instead of duplicated
+- the app can grow from a blog into a broader research workspace without splitting stacks too early
 
-This architecture is a good fit because the product already combines:
+This is a good fit because the product already combines:
 
-- content publishing
-- account lifecycle and moderation
-- research paper ingestion
+- public publishing
+- admin identity and security
+- comment moderation
+- research paper ingestion and private reading workflow
 - scheduled jobs
-- AI/RAG features
+- AI and RAG features
 - internal admin tooling
 
 ## 2. Runtime layers
@@ -42,9 +43,9 @@ Primary directories:
 
 Implemented with:
 
-- server actions in `lib/actions/*`
+- Server Actions in `lib/actions/*`
 - query helpers in `lib/queries.ts` and related modules
-- domain-specific services such as auth, moderation, notifications, and RAG helpers
+- domain services for auth, moderation, notifications, uploads, papers, analytics, and RAG
 
 Primary directories:
 
@@ -57,7 +58,7 @@ Implemented with:
 
 - Prisma schema in `prisma/schema.prisma`
 - PostgreSQL as the main runtime database
-- seeded demo/admin data in `prisma/seed.ts`
+- seed logic in `prisma/seed.ts`
 
 ### Integration layer
 
@@ -70,34 +71,32 @@ Implemented with:
 
 ## 3. Main bounded contexts
 
-The repository now contains several clear product domains.
-
-### Publishing and content
+### Publishing and discovery
 
 - blog posts
 - notes
 - journal entries
+- gallery albums
 - content series
 - tags and categories
 - archives and related-post recommendations
 - revision history and scheduled publishing
 
-### Accounts, security, and moderation
+### Admin identity, security, and moderation
 
-- registration and login
-- email verification
+- admin-only sign-in
+- admin email verification
 - forgot/reset/change password
 - custom session management
 - admin-only 2FA
-- login rate limiting and unusual login alerts
-- user role/status management
+- login rate limiting and unusual-login alerts
 - comment moderation, anti-spam, and rule management
-- in-app and email notifications
+- admin inbox and email notifications
 
 ### Research workspace
 
 - paper topics and daily arXiv sync
-- personal paper library
+- private admin paper library
 - paper annotations and progress tracking
 - weekly digest generation
 - citation and BibTeX export
@@ -130,7 +129,7 @@ The repository now contains several clear product domains.
 
 ### Write flow
 
-1. A form submits to a server action or API route.
+1. A form submits to a Server Action or API route.
 2. Zod validates the input.
 3. The application layer applies permission and business rules.
 4. Prisma writes to PostgreSQL.
@@ -150,28 +149,31 @@ These jobs update the database so the public site and admin tools stay in sync.
 
 ## 5. Security model
 
-The project currently uses:
+The current security model is built around:
 
 - database-backed sessions stored in an HttpOnly cookie
-- role checks (`ADMIN`, `READER`)
-- status checks (`ACTIVE`, `SUSPENDED`, `DELETED`)
+- runtime acceptance of `ADMIN` sessions only
 - admin route protection
-- email verification gates for comment participation
-- comment anti-spam rules
-- rate limiting on sensitive auth flows
+- password reset and admin email verification
 - admin-only 2FA
+- login attempt rate limiting and unusual-login alerts
 - audit logs for privileged actions
 
-This is intentionally stronger than a typical personal blog because the product now includes provider keys, exports, and moderation workflows.
+For comments, the model is intentionally different:
+
+- public readers do not sign in
+- guests can comment with a public name and optional private email
+- anti-spam protection includes a honeypot, duplicate checks, rate limiting, and rule-based moderation
+- optional IP-hash fingerprinting supports abuse control without exposing raw IPs in app logic
+
+The Prisma schema still keeps simple role enums such as `ADMIN` and `READER` for compatibility, but the live product flow no longer provisions public reader accounts and rejects non-admin sessions.
 
 ## 6. Extensibility
-
-The architecture deliberately leaves room for further expansion without major rewrites.
 
 Current extension points include:
 
 - adding new provider adapters
-- extending the `/tools` area with more AI utilities
+- extending `/tools` with more AI utilities
 - expanding the RAG knowledge model
 - adding more exports and analytics reports
 - introducing object storage or richer media pipelines

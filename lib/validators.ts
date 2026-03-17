@@ -174,6 +174,8 @@ export const profileSchema = z.object({
 export const commentSchema = z.object({
   postId: z.string().trim().min(1),
   parentId: z.string().trim().min(1).optional().nullable(),
+  guestName: z.string().trim().max(60).optional(),
+  guestEmail: z.union([z.email(), z.literal(""), z.null()]).optional(),
   content: z.string().trim().min(6).max(1200),
 });
 

@@ -21,8 +21,15 @@ export default async function LoginPage({
           Sign in to manage the site.
         </h1>
         <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
-          Admins can manage the full site here, while reader accounts can sign in for commenting, account management, and My Library after email verification.
+          This login is reserved for the site administrator. Readers can browse normally and leave
+          guest comments without creating an account.
         </p>
+        {params.error === "registration-closed" ? (
+          <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
+            Public registration is closed. The site now uses guest comments instead of reader
+            accounts.
+          </div>
+        ) : null}
         {params.error === "verify-email" ? (
           <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
             Please verify your email before signing in. If needed, submit the form once and use the resend action shown below.
@@ -63,20 +70,12 @@ export default async function LoginPage({
 
       <div className="space-y-4">
         <AuthForm mode="login" nextPath={nextPath} />
-        <div className="space-y-2 text-sm text-[var(--ink-soft)]">
-          <p>
-            No account yet?
-            <Link href="/register" className="ml-2 font-semibold text-[var(--accent-strong)]">
-              Register
-            </Link>
-          </p>
-          <p>
-            Forgot your password?
-            <Link href="/forgot-password" className="ml-2 font-semibold text-[var(--accent-strong)]">
-              Reset it here
-            </Link>
-          </p>
-        </div>
+        <p className="text-sm text-[var(--ink-soft)]">
+          Forgot the admin password?
+          <Link href="/forgot-password" className="ml-2 font-semibold text-[var(--accent-strong)]">
+            Reset it here
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -99,6 +99,12 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     return null;
   }
 
+  if (session.user.role !== UserRole.ADMIN) {
+    await prisma.session.deleteMany({ where: { userId: session.user.id } }).catch(() => null);
+    cookieStore.delete(SESSION_COOKIE_NAME);
+    return null;
+  }
+
   return {
     id: session.user.id,
     name: session.user.name,

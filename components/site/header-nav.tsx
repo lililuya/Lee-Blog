@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Archive,
   ArrowUp,
-  Bell,
   BookOpenText,
-  Bookmark,
   FileSearch,
   Images,
   LayoutDashboard,
@@ -36,7 +34,6 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  count?: number;
 };
 
 const baseItems = [
@@ -66,41 +63,13 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function formatUnreadCount(count: number) {
-  if (count > 99) {
-    return "99+";
-  }
-
-  return String(count);
-}
-
 export function HeaderNav({
   isSignedIn,
   isAdmin,
-  unreadNotificationCount = 0,
   mode = "all",
 }: HeaderNavProps) {
   const pathname = usePathname();
-  const items: NavItem[] = isSignedIn
-    ? [
-        ...baseItems.slice(0, 6),
-        { href: "/papers/library", label: "My Library", icon: Bookmark },
-        ...baseItems.slice(6),
-        ...(isAdmin ? adminItems : []),
-      ]
-    : [...baseItems, ...(isAdmin ? adminItems : [])];
-  const notificationCount = unreadNotificationCount > 0 ? unreadNotificationCount : undefined;
-  const mobileItems = isSignedIn
-    ? [
-        ...items,
-        {
-          href: "/account/notifications",
-          label: "Inbox",
-          icon: Bell,
-          count: notificationCount,
-        },
-      ]
-    : items;
+  const items: NavItem[] = [...baseItems, ...(isAdmin ? adminItems : [])];
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -136,31 +105,6 @@ export function HeaderNav({
 
           <div className="site-side-rail__utility-dock">
             <div className="site-side-rail__tools" role="group" aria-label="Quick actions">
-              {isSignedIn ? (
-                <Link
-                  href="/account/notifications"
-                  className={cn(
-                    "site-side-rail__tool",
-                    isActive(pathname, "/account/notifications") && "site-side-rail__tool--active",
-                  )}
-                  aria-label={
-                    unreadNotificationCount > 0
-                      ? `Inbox, ${unreadNotificationCount} unread notifications`
-                      : "Inbox"
-                  }
-                  title="Inbox"
-                >
-                  <span className="site-side-rail__tool-icon" aria-hidden="true">
-                    <Bell className="h-4 w-4" />
-                  </span>
-                  {notificationCount ? (
-                    <span className="site-side-rail__count" aria-hidden="true">
-                      {formatUnreadCount(notificationCount)}
-                    </span>
-                  ) : null}
-                  <span className="site-side-rail__tool-label">Inbox</span>
-                </Link>
-              ) : null}
               {isAdmin ? (
                 <Link
                   href="/admin"
@@ -210,12 +154,8 @@ export function HeaderNav({
 
       {mode !== "desktop" ? (
         <nav className="mt-4 flex items-center gap-2 overflow-x-auto pb-1 min-[1400px]:hidden">
-          {mobileItems.map(({ href, label, icon: Icon }) => {
+          {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
-            const count =
-              href === "/account/notifications" && notificationCount
-                ? formatUnreadCount(notificationCount)
-                : null;
 
             return (
               <Link
@@ -228,7 +168,6 @@ export function HeaderNav({
                   <Icon className="h-4 w-4" />
                 </span>
                 {label}
-                {count ? <span className="site-nav-chip__count">{count}</span> : null}
               </Link>
             );
           })}
