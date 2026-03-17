@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type JournalFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   entry?: {
     id: string;
     title: string;
@@ -38,7 +39,7 @@ function toDateTimeLocalString(date: Date | null | undefined) {
     .slice(0, 16);
 }
 
-export function JournalForm({ action, submitLabel, entry }: JournalFormProps) {
+export function JournalForm({ action, submitLabel, confirmMessage, entry }: JournalFormProps) {
   const formId = entry ? `journal-form-${entry.id}` : "journal-form-new";
   const storageKey = entry ? `draft:journal:${entry.id}` : "draft:journal:new";
 
@@ -46,6 +47,7 @@ export function JournalForm({ action, submitLabel, entry }: JournalFormProps) {
     <form
       id={formId}
       action={action}
+      data-confirm-message={confirmMessage}
       className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       {entry ? <input type="hidden" name="entryId" value={entry.id} /> : null}

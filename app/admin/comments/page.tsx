@@ -46,7 +46,7 @@ export default async function AdminCommentsPage() {
                     Post: {comment.post.title}
                   </div>
                   {comment.parent ? (
-                    <div className="rounded-[1.2rem] border border-black/8 bg-[rgba(246,244,239,0.82)] px-4 py-3 text-sm leading-7 text-[var(--ink-soft)]">
+                    <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--panel-soft)] px-4 py-3 text-sm leading-7 text-[var(--ink-soft)]">
                       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
                         Reply Context
                       </div>
@@ -92,14 +92,20 @@ export default async function AdminCommentsPage() {
 
                   {comment.status === "PENDING" ? (
                     <div className="grid w-full gap-2 sm:grid-cols-2 md:w-auto">
-                      <form action={moderateCommentAction}>
+                      <form
+                        action={moderateCommentAction}
+                        data-confirm-message="Approve this comment? It will become visible on the site immediately."
+                      >
                         <input type="hidden" name="commentId" value={comment.id} />
                         <input type="hidden" name="status" value="APPROVED" />
                         <button type="submit" className="btn-secondary w-full">
                           Approve
                         </button>
                       </form>
-                      <form action={moderateCommentAction}>
+                      <form
+                        action={moderateCommentAction}
+                        data-confirm-message="Reject this comment? The author will see it as rejected and it will stay hidden."
+                      >
                         <input type="hidden" name="commentId" value={comment.id} />
                         <input type="hidden" name="status" value="REJECTED" />
                         <button type="submit" className="btn-secondary w-full text-rose-700">
@@ -109,7 +115,11 @@ export default async function AdminCommentsPage() {
                     </div>
                   ) : null}
 
-                  <form action={deleteCommentAction} className="w-full md:w-auto">
+                  <form
+                    action={deleteCommentAction}
+                    data-confirm-message="Delete this comment permanently? This also removes its discussion context from the site."
+                    className="w-full md:w-auto"
+                  >
                     <input type="hidden" name="commentId" value={comment.id} />
                     <button type="submit" className="btn-secondary w-full text-rose-700">
                       Delete

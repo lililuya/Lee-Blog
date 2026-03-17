@@ -14,8 +14,12 @@ type CommentItem = {
   author: { name: string };
 };
 
+type ThreadedReply = CommentItem & {
+  replyToAuthorName?: string | null;
+};
+
 type ThreadedComment = CommentItem & {
-  replies: CommentItem[];
+  replies: ThreadedReply[];
 };
 
 type CommentThreadProps = {
@@ -64,6 +68,7 @@ function renderStatusMessage(statusMessage: string | undefined) {
 }
 
 function buildCommentThread(comments: CommentItem[]): ThreadedComment[] {
+  const commentsById = new Map(comments.map((comment) => [comment.id, comment]));
   const repliesByParent = new Map<string, CommentItem[]>();
 
   for (const comment of comments) {
@@ -76,12 +81,33 @@ function buildCommentThread(comments: CommentItem[]): ThreadedComment[] {
     repliesByParent.set(comment.parentId, currentReplies);
   }
 
+  function collectDescendantIds(parentId: string, ids: Set<string>) {
+    const directReplies = repliesByParent.get(parentId) ?? [];
+
+    for (const reply of directReplies) {
+      ids.add(reply.id);
+      collectDescendantIds(reply.id, ids);
+    }
+  }
+
   return comments
     .filter((comment) => !comment.parentId)
-    .map((comment) => ({
-      ...comment,
-      replies: repliesByParent.get(comment.id) ?? [],
-    }));
+    .map((comment) => {
+      const descendantIds = new Set<string>();
+      collectDescendantIds(comment.id, descendantIds);
+
+      return {
+        ...comment,
+        replies: comments
+          .filter((reply) => descendantIds.has(reply.id))
+          .map((reply) => ({
+            ...reply,
+            replyToAuthorName: reply.parentId
+              ? (commentsById.get(reply.parentId) ?? null)?.author.name ?? null
+              : null,
+          })),
+      };
+    });
 }
 
 function CommentComposer({
@@ -150,15 +176,15 @@ export function CommentThread({
   return (
     <section
       id={sectionId}
-      className="scroll-mt-28 space-y-8 rounded-[2rem] border border-black/8 bg-white/72 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+      className="comment-thread-shell scroll-mt-28 space-y-8 rounded-[2rem] border border-black/8 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       <div className="space-y-2">
         <p className="section-kicker">Comments</p>
         <h2 className="font-serif text-3xl font-semibold tracking-tight">Discussion</h2>
         <p className="text-sm leading-7 text-[var(--ink-soft)]">
           Reader comments are scanned automatically first. Clean comments can go live immediately,
-          while risky ones are held for admin review. Replies stay one level deep so the discussion
-          remains readable.
+          while risky ones are held for admin review. Direct replies are shown in one flattened
+          layer so the discussion stays readable even when you answer another reply.
         </p>
       </div>
 
@@ -174,7 +200,7 @@ export function CommentThread({
             <article
               key={comment.id}
               id={`comment-${comment.id}`}
-              className="rounded-[1.4rem] border border-black/8 bg-[rgba(255,255,255,0.82)] p-5"
+              className="comment-thread-card rounded-[1.4rem] border border-black/8 p-5"
             >
               <div className="mb-3 flex items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
                 <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
@@ -183,12 +209,12 @@ export function CommentThread({
               <p className="text-sm leading-7 text-[var(--ink-soft)]">{comment.content}</p>
 
               {comment.replies.length > 0 ? (
-                <div className="mt-5 space-y-3 border-l border-black/8 pl-4 md:pl-6">
+                <div className="comment-thread-replies mt-5 space-y-3 border-l border-black/8 pl-4 md:pl-6">
                   {comment.replies.map((reply) => (
                     <article
                       key={reply.id}
                       id={`comment-${reply.id}`}
-                      className="rounded-[1.2rem] border border-black/8 bg-[rgba(246,244,239,0.9)] p-4"
+                      className="comment-thread-reply rounded-[1.2rem] border border-black/8 p-4"
                     >
                       <div className="mb-2 flex items-center justify-between gap-3 text-sm text-[var(--ink-soft)]">
                         <span className="inline-flex items-center gap-2 font-semibold text-[var(--ink)]">
@@ -197,14 +223,37 @@ export function CommentThread({
                         </span>
                         <span>{formatDate(reply.createdAt, "yyyy-MM-dd HH:mm")}</span>
                       </div>
+                      {reply.replyToAuthorName ? (
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+                          Replying to {reply.replyToAuthorName}
+                        </p>
+                      ) : null}
                       <p className="text-sm leading-7 text-[var(--ink-soft)]">{reply.content}</p>
+                      {canReply ? (
+                        <details className="comment-thread-reply-box mt-4 rounded-[1rem] border border-dashed border-black/10 p-3">
+                          <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent-strong)]">
+                            Reply to {reply.author.name}
+                          </summary>
+                          <div className="mt-3">
+                            <CommentComposer
+                              postId={postId}
+                              postSlug={postSlug}
+                              parentId={reply.id}
+                              label={`Reply to ${reply.author.name}`}
+                              submitLabel="Submit reply"
+                              placeholder="Add a thoughtful follow-up to this reply."
+                              websiteFieldId={`comment-website-${reply.id}`}
+                            />
+                          </div>
+                        </details>
+                      ) : null}
                     </article>
                   ))}
                 </div>
               ) : null}
 
               {canReply ? (
-                <details className="mt-5 rounded-[1.2rem] border border-dashed border-black/10 bg-[rgba(246,244,239,0.72)] p-4">
+                <details className="comment-thread-reply-box mt-5 rounded-[1.2rem] border border-dashed border-black/10 p-4">
                   <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--accent-strong)]">
                     Reply to {comment.author.name}
                   </summary>
@@ -224,7 +273,7 @@ export function CommentThread({
             </article>
           ))
         ) : (
-          <div className="rounded-[1.4rem] border border-dashed border-black/10 bg-white/55 p-6 text-sm leading-7 text-[var(--ink-soft)]">
+          <div className="comment-thread-empty rounded-[1.4rem] border border-dashed border-black/10 p-6 text-sm leading-7 text-[var(--ink-soft)]">
             There are no comments yet. You can be the first one to join the discussion.
           </div>
         )}
@@ -252,7 +301,7 @@ export function CommentThread({
           />
         )
       ) : (
-        <div className="rounded-[1.4rem] border border-black/8 bg-[rgba(27,107,99,0.05)] p-5 text-sm leading-7 text-[var(--ink-soft)]">
+        <div className="comment-thread-signin rounded-[1.4rem] border border-black/8 p-5 text-sm leading-7 text-[var(--ink-soft)]">
           Sign in to leave a comment and join the discussion.
           <Link
             href={`/login?next=/blog/${postSlug}`}

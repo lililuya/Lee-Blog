@@ -81,7 +81,11 @@ export default async function AdminRagPage({
               <p>Multimodal provider slug: {formatReservationValue(overview.reservations.multimodal.providerSlug)}</p>
             </div>
           </div>
-          <form action={syncRagKnowledgeAction} className="mt-6">
+          <form
+            action={syncRagKnowledgeAction}
+            data-confirm-message="Sync the RAG knowledge base now? Existing chunks will be refreshed from the latest content."
+            className="mt-6"
+          >
             <SubmitButton className="px-5">
               <RefreshCcw className="h-4 w-4" />
               Sync RAG knowledge

@@ -13,6 +13,10 @@ const urlField = z.union([z.string().url(), z.literal(""), z.null()]).optional()
 const urlOrRootRelativeField = z
   .union([z.string().url(), z.string().regex(/^\/[^\s]*$/), z.literal(""), z.null()])
   .optional();
+const requiredUrlOrRootRelativeField = z.union([
+  z.string().url(),
+  z.string().regex(/^\/[^\s]*$/),
+]);
 const passwordField = z.string().min(8).max(100);
 const commentModerationRuleModeSchema = z.enum(["ALLOW", "BLOCK"]);
 const commentModerationRuleSeveritySchema = z.enum(["REVIEW", "REJECT"]);
@@ -97,6 +101,29 @@ export const noteSchema = z.object({
   publishedAt: z.union([z.coerce.date(), z.null()]),
 });
 
+export const galleryImageSchema = z.object({
+  imageUrl: requiredUrlOrRootRelativeField,
+  thumbUrl: urlOrRootRelativeField,
+  alt: z.string().trim(),
+  caption: z.string().trim().optional(),
+  width: z.union([z.coerce.number().int().min(1).max(12000), z.null()]).optional(),
+  height: z.union([z.coerce.number().int().min(1).max(12000), z.null()]).optional(),
+  shotAt: z.union([z.coerce.date(), z.null()]).optional(),
+});
+
+export const gallerySchema = z.object({
+  title: z.string().trim(),
+  slug: z.string().trim(),
+  summary: z.string().trim(),
+  description: z.string().trim(),
+  coverImageUrl: urlOrRootRelativeField,
+  tags: z.array(z.string()),
+  status: z.nativeEnum(PostStatus),
+  featured: z.boolean(),
+  publishedAt: z.union([z.coerce.date(), z.null()]),
+  images: z.array(galleryImageSchema).min(1, "At least one image is required."),
+});
+
 export const contentSeriesSchema = z.object({
   title: z.string().trim().min(2).max(160),
   slug: z.string().trim().min(2).max(180),
@@ -121,7 +148,7 @@ export const profileSchema = z.object({
   headline: z.string().trim().min(8).max(160),
   tagline: z.string().trim().min(12).max(220),
   shortBio: z.string().trim().min(24),
-  longBio: z.string().trim().min(60),
+  longBio: z.string().trim().max(12000),
   institution: z.string().trim().max(120).optional(),
   department: z.string().trim().max(120).optional(),
   location: z.string().trim().max(120).optional(),
@@ -133,6 +160,9 @@ export const profileSchema = z.object({
   cvUrl: urlField,
   heroImageUrl: urlOrRootRelativeField,
   backgroundImageUrl: urlOrRootRelativeField,
+  backgroundVideoUrl: urlOrRootRelativeField,
+  backgroundMediaMode: z.enum(["IMAGE", "VIDEO"]),
+  backgroundOverlayOpacity: z.coerce.number().int().min(0).max(100),
   assistantAvatarUrl: urlOrRootRelativeField,
   researchAreas: z.array(z.string()).max(12),
   educationMarkdown: z.string().trim().min(8),
@@ -213,8 +243,17 @@ export const commentDeleteSchema = z.object({
   commentId: z.string().trim().min(1),
 });
 
+export const galleryDeleteSchema = z.object({
+  galleryId: z.string().trim().min(1),
+});
+
 export const notificationActionSchema = z.object({
   notificationId: z.string().trim().min(1),
+});
+
+export const commentNotificationSettingsSchema = z.object({
+  emailCommentNotifications: z.boolean(),
+  inAppCommentNotifications: z.boolean(),
 });
 
 export const commentModerationRuleSchema = z.object({

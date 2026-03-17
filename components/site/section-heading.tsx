@@ -18,10 +18,12 @@ export function SectionHeading({
 }: SectionHeadingProps) {
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div className="max-w-3xl space-y-3">
+      <div className="section-heading__stack max-w-3xl space-y-3">
         <p className="section-kicker">{kicker}</p>
-        <h2 className="section-title text-[clamp(1.8rem,3.2vw,3rem)]">{title}</h2>
-        <p className="section-copy max-w-2xl">{description}</p>
+        <h2 className="section-title section-heading__title text-[clamp(1.8rem,3.2vw,3rem)]">
+          {title}
+        </h2>
+        <p className="section-copy section-heading__description max-w-2xl">{description}</p>
       </div>
       {href && linkLabel ? (
         <Link href={href} className="section-link-pill self-start md:self-end">

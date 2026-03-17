@@ -63,6 +63,11 @@ function RuleForm({
   return (
     <form
       action={saveCommentModerationRuleAction}
+      data-confirm-message={
+        rule
+          ? "Save changes to this moderation rule? Future comments will be evaluated against the updated rule immediately."
+          : "Create this moderation rule? It will start affecting new comments immediately."
+      }
       className="space-y-4 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.78)] p-5"
     >
       {rule ? <input type="hidden" name="ruleId" value={rule.id} /> : null}
@@ -219,7 +224,10 @@ export default async function AdminCommentRulesPage({
                     <span className="badge-soft">{rule.severity}</span>
                     <span className="badge-soft">{rule.enabled ? "ENABLED" : "DISABLED"}</span>
                   </div>
-                  <form action={deleteCommentModerationRuleAction}>
+                      <form
+                        action={deleteCommentModerationRuleAction}
+                        data-confirm-message={`Delete the moderation rule "${rule.term}"? This cannot be undone from the admin console.`}
+                      >
                     <input type="hidden" name="ruleId" value={rule.id} />
                     <button type="submit" className="btn-secondary text-rose-700">
                       Delete rule

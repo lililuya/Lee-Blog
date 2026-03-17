@@ -21,6 +21,8 @@ export type CurrentUser = {
   emailVerifiedAt: Date | null;
   emailVerificationRequired: boolean;
   emailPostNotifications: boolean;
+  emailCommentNotifications: boolean;
+  inAppCommentNotifications: boolean;
   mutedUntil: Date | null;
   muteReason: string | null;
 } | null;
@@ -107,6 +109,8 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     emailVerifiedAt: session.user.emailVerifiedAt,
     emailVerificationRequired: session.user.emailVerificationRequired,
     emailPostNotifications: session.user.emailPostNotifications,
+    emailCommentNotifications: session.user.emailCommentNotifications,
+    inAppCommentNotifications: session.user.inAppCommentNotifications,
     mutedUntil: session.user.mutedUntil,
     muteReason: session.user.muteReason,
   };

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ExternalLink, FileText, NotebookPen, PlayCircle, Trash2 } from "lucide-react";
 import { CitationPanel } from "@/components/site/citation-panel";
+import { SectionHeading } from "@/components/site/section-heading";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
   addPaperAnnotationAction,
@@ -77,20 +78,13 @@ export default async function PaperLibraryPage({
   return (
     <div className="container-shell py-16">
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
-            <p className="section-kicker">Research Library</p>
-            <h1 className="font-serif text-[clamp(2.2rem,4vw,3.8rem)] font-semibold tracking-tight">
-              My Paper Library
-            </h1>
-            <p className="max-w-3xl text-base leading-8 text-[var(--ink-soft)]">
-              Keep saved papers in a private queue, sync reading progress, capture highlighted passages, and export clean citations when an idea graduates into a note or digest.
-            </p>
-          </div>
-          <Link href="/papers" className="btn-secondary">
-            Back to Daily Papers
-          </Link>
-        </div>
+        <SectionHeading
+          kicker="Research Library"
+          title="My Paper Library"
+          description="Keep saved papers in a private queue, sync reading progress, capture highlighted passages, and export clean citations when an idea graduates into a note or digest."
+          href="/papers"
+          linkLabel="Back to Daily Papers"
+        />
 
         {params.notice && paperLibraryNoticeMap[params.notice] ? (
           <div className="rounded-[1.6rem] border border-[rgba(27,107,99,0.18)] bg-[rgba(27,107,99,0.08)] px-5 py-4 text-sm leading-7 text-[var(--ink-soft)]">

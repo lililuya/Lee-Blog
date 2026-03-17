@@ -4,7 +4,11 @@ import {
   UserRole,
   UserStatus,
 } from "@prisma/client";
-import { hasCommentReplySupport, prisma } from "@/lib/prisma";
+import {
+  hasCommentReplySupport,
+  hasSiteProfileBackgroundMediaModeSupport,
+  prisma,
+} from "@/lib/prisma";
 import {
   getPublishingCutoff,
   isLivePublishedAt,
@@ -87,6 +91,12 @@ type ArchiveMonthGroup = {
   total: number;
   entries: ArchiveEntry[];
 };
+
+const archiveMonthFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 type PublicSeriesEntry = {
   id: string;
@@ -350,9 +360,16 @@ function buildArchiveTimeline(entries: ArchiveEntry[], limitMonths?: number): Ar
     group.entries.push(entry);
   }
 
-  const timeline = Array.from(groups.values()).sort((left, right) =>
-    right.key.localeCompare(left.key),
-  );
+  const timeline = Array.from(groups.values())
+    .map((group) => {
+      const [year, month] = group.key.split("-").map(Number);
+
+      return {
+        ...group,
+        label: archiveMonthFormatter.format(new Date(Date.UTC(year, month - 1, 1))),
+      };
+    })
+    .sort((left, right) => right.key.localeCompare(left.key));
 
   return typeof limitMonths === "number" ? timeline.slice(0, limitMonths) : timeline;
 }
@@ -467,12 +484,80 @@ function buildPublicSeriesDetailFromRecord(series: {
   };
 }
 
+async function resolveSiteProfileBackgroundMediaModeFallback() {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ backgroundMediaMode: string | null }>>`
+      SELECT "backgroundMediaMode"
+      FROM "SiteProfile"
+      WHERE "id" = 'main'
+      LIMIT 1
+    `;
+
+    return rows[0]?.backgroundMediaMode ?? "IMAGE";
+  } catch (error) {
+    console.error("[queries:site-profile-background-mode]", error);
+    return "IMAGE";
+  }
+}
+
+async function normalizeSiteProfileRecord<
+  T extends {
+    backgroundMediaMode?: string | null;
+  },
+>(profile: T | null) {
+  if (!profile) {
+    return null;
+  }
+
+  if (hasSiteProfileBackgroundMediaModeSupport()) {
+    return {
+      ...profile,
+      backgroundMediaMode: profile.backgroundMediaMode ?? "IMAGE",
+    };
+  }
+
+  return {
+    ...profile,
+    backgroundMediaMode: await resolveSiteProfileBackgroundMediaModeFallback(),
+  };
+}
+
 export async function getSiteProfile() {
   if (!isDatabaseConfigured()) {
     return demoProfile;
   }
 
-  return (await prisma.siteProfile.findUnique({ where: { id: "main" } })) ?? demoProfile;
+  return (await normalizeSiteProfileRecord(
+    await prisma.siteProfile.findUnique({ where: { id: "main" } }),
+  )) ?? demoProfile;
+}
+
+export async function getSiteOwnerIdentity() {
+  if (!isDatabaseConfigured()) {
+    return {
+      name: demoProfile.fullName,
+      avatarUrl: demoProfile.heroImageUrl || null,
+    };
+  }
+
+  const adminUser = await prisma.user.findFirst({
+    where: {
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+    select: {
+      name: true,
+      avatarUrl: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return {
+    name: adminUser?.name ?? demoProfile.fullName,
+    avatarUrl: adminUser?.avatarUrl ?? demoProfile.heroImageUrl ?? null,
+  };
 }
 
 export async function getPublicContentSeries(limit?: number) {
@@ -1886,7 +1971,9 @@ export async function getAdminProfile() {
     return demoProfile;
   }
 
-  return (await prisma.siteProfile.findUnique({ where: { id: "main" } })) ?? demoProfile;
+  return (await normalizeSiteProfileRecord(
+    await prisma.siteProfile.findUnique({ where: { id: "main" } }),
+  )) ?? demoProfile;
 }
 
 export async function getPaperArchive(limit = 60) {

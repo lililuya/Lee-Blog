@@ -7,6 +7,7 @@ import {
   FileSearch,
   Github,
   Globe,
+  Images,
   Mail,
   MapPin,
   MessageCircle,
@@ -26,6 +27,7 @@ import {
   getPublishedPosts,
   getRecentApprovedComments,
   getRecentJournalEntries,
+  getSiteOwnerIdentity,
   getSiteProfile,
   getWeeklyDigests,
 } from "@/lib/queries";
@@ -73,6 +75,12 @@ const quickLinks: QuickLink[] = [
     icon: ScrollText,
   },
   {
+    href: "/gallery",
+    label: "Gallery",
+    detail: "Visual albums",
+    icon: Images,
+  },
+  {
     href: "/archive",
     label: "Archive",
     detail: "Browse by month",
@@ -113,23 +121,23 @@ function buildRecentUpdates(args: {
       .filter((post) => post.slug !== pinnedSlug)
       .map((post) => ({
         href: `/blog/${post.slug}`,
-        kindLabel: "鍗氬",
+        kindLabel: "Blog",
         title: post.title,
         summary: post.excerpt,
-        meta: `${post.category} 路 ${getReadMinutes(post)} 鍒嗛挓闃呰`,
+        meta: `${post.category} · ${getReadMinutes(post)} min read`,
         date: post.publishedAt ?? post.updatedAt,
       })),
     ...notes.map((note) => ({
       href: `/notes/${note.slug}`,
-      kindLabel: "绗旇",
+      kindLabel: "Note",
       title: note.title,
       summary: note.summary,
-      meta: note.noteType ?? "甯搁潚绗旇",
+      meta: note.noteType ?? "Evergreen note",
       date: note.publishedAt ?? note.updatedAt,
     })),
     ...digests.map((digest) => ({
       href: `/digest/${digest.slug}`,
-      kindLabel: "鍛ㄦ姤",
+      kindLabel: "Digest",
       title: digest.title,
       summary: digest.summary,
       meta: `${formatDate(digest.periodStart, "MM.dd")} - ${formatDate(digest.periodEnd, "MM.dd")}`,
@@ -137,10 +145,10 @@ function buildRecentUpdates(args: {
     })),
     ...journals.map((entry) => ({
       href: "/journal",
-      kindLabel: "鏃ュ織",
+      kindLabel: "Journal",
       title: entry.title,
       summary: entry.summary,
-      meta: entry.mood ?? "鐮旂┒鏃ュ織",
+      meta: entry.mood ?? "Research journal",
       date: entry.publishedAt,
     })),
   ];
@@ -154,6 +162,7 @@ export default async function HomePage() {
   const [
     currentUser,
     profile,
+    siteOwner,
     pinnedPosts,
     posts,
     notes,
@@ -165,6 +174,7 @@ export default async function HomePage() {
   ] = await Promise.all([
     getCurrentUser(),
     getSiteProfile(),
+    getSiteOwnerIdentity(),
     getPinnedPosts(1),
     getPublishedPosts(6),
     getPublishedNotes(4),
@@ -176,8 +186,8 @@ export default async function HomePage() {
   ]);
 
   const pinnedPost = pinnedPosts[0] ?? posts[0] ?? null;
-  const profileAvatarName = currentUser?.name ?? profile.fullName;
-  const profileAvatarSrc = currentUser?.avatarUrl || profile.heroImageUrl;
+  const profileAvatarName = profile.fullName || siteOwner.name;
+  const profileAvatarSrc = siteOwner.avatarUrl || profile.heroImageUrl;
   const recentUpdates = buildRecentUpdates({
     posts,
     notes,
@@ -195,10 +205,11 @@ export default async function HomePage() {
               <div>
                 <p className="section-kicker">Quick Links</p>
                 <h1 className="mt-2 font-serif text-[clamp(2rem,3.5vw,3rem)] font-semibold tracking-tight">
-                  娓呮櫚娴忚锛屼粠杩欓噷寮€濮?                </h1>
+                  Browse clearly, start here.
+                </h1>
               </div>
               <Link href="/archive" className="section-link-pill section-link-pill--compact">
-                杩涘叆褰掓。
+                Open archive
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
@@ -225,7 +236,7 @@ export default async function HomePage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full bg-[rgba(168,123,53,0.14)] px-4 py-2 text-sm font-semibold text-[var(--gold)]">
                   <Pin className="h-4 w-4" />
-                  置顶
+                  Pinned
                 </span>
                 <span className="text-sm text-[var(--ink-soft)]">
                   {formatDate(pinnedPost.publishedAt, "yyyy-MM-dd")}
@@ -258,11 +269,11 @@ export default async function HomePage() {
 
                   <div className="flex flex-wrap gap-3">
                     <Link href={`/blog/${pinnedPost.slug}`} className="btn-primary">
-                      闃呰缃《鏂囩珷
+                      Read featured post
                       <ArrowUpRight className="h-4 w-4" />
                     </Link>
                     <Link href="/blog" className="btn-secondary">
-                      鏌ョ湅鍏ㄩ儴鏂囩珷
+                      Browse all posts
                     </Link>
                   </div>
                 </div>
@@ -270,7 +281,7 @@ export default async function HomePage() {
                 <div className="grid gap-3">
                   <article className="home-sidebar-card rounded-[1.7rem] p-4">
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                      鍒嗙被
+                      Category
                     </p>
                     <div className="mt-2">
                       <CategoryLinkPill
@@ -282,19 +293,21 @@ export default async function HomePage() {
 
                   <article className="home-sidebar-card rounded-[1.7rem] p-4">
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                      闃呰鏃堕棿
+                      Reading time
                     </p>
                     <p className="mt-2 font-serif text-2xl font-semibold tracking-tight">
-                      {getReadMinutes(pinnedPost)} 鍒嗛挓
+                      {getReadMinutes(pinnedPost)} min
                     </p>
                   </article>
 
                   <article className="home-sidebar-card rounded-[1.7rem] p-4">
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                      鍐呭瀹氫綅
+                      Why it matters
                     </p>
                     <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
-                      杩欑瘒鏂囩珷浼氫唬琛ㄥ綋鍓嶉樁娈垫渶鍊煎緱浼樺厛闃呰鐨勬牳蹇冭緭鍑猴紝涔熶細浣滀负棣栭〉涓讳綅鍐呭鎸佺画灞曠ず銆?                    </p>
+                      This piece represents the strongest current thread on the site and stays on
+                      the homepage as the main editorial entry point.
+                    </p>
                   </article>
                 </div>
               </div>
@@ -306,12 +319,15 @@ export default async function HomePage() {
               <div className="space-y-2">
                 <p className="section-kicker">Recent Updates</p>
                 <h2 className="font-serif text-[clamp(2rem,3vw,3rem)] font-semibold tracking-tight">
-                  鏈€杩戞洿鏂?                </h2>
+                  Latest from the site
+                </h2>
                 <p className="max-w-2xl text-sm leading-7 text-[var(--ink-soft)]">
-                  鍙傝€冧簡 `jiming.site` 鐨勮繛缁槄璇绘祦锛屾垜鎶婇椤典腑闂存敼鎴愪簡鐪熸鍙『鐫€寰€涓嬭鐨勬洿鏂板垪琛紝鑰屼笉鏄爢寰堝浜掔浉绔炰簤娉ㄦ剰鍔涚殑妯″潡銆?                </p>
+                  Inspired by the continuous reading flow on `jiming.site`, the center column now
+                  works as a true stream of updates instead of a stack of competing modules.
+                </p>
               </div>
               <Link href="/archive" className="btn-secondary">
-                娴忚瀹屾暣褰掓。
+                Browse full archive
               </Link>
             </div>
 
@@ -336,7 +352,7 @@ export default async function HomePage() {
                     {item.summary}
                   </p>
                   <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)]">
-                    缁х画闃呰
+                    Continue reading
                     <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                   </div>
                 </Link>
@@ -418,7 +434,7 @@ export default async function HomePage() {
                   className="btn-secondary"
                 >
                   <Globe className="h-4 w-4" />
-                  娑擃亙姹夌純鎴犵彲
+                  Website
                 </Link>
               ) : null}
               {profile.githubUrl ? (
@@ -440,7 +456,8 @@ export default async function HomePage() {
               <div>
                 <p className="section-kicker">Archive</p>
                 <h3 className="mt-2 font-serif text-2xl font-semibold tracking-tight">
-                  鏈€杩戝綊妗?                </h3>
+                  Recent archive
+                </h3>
               </div>
               <Archive className="h-5 w-5 text-[var(--accent)]" />
             </div>
@@ -461,7 +478,7 @@ export default async function HomePage() {
             </div>
 
             <Link href="/archive" className="section-link-pill section-link-pill--compact mt-5">
-              鏌ョ湅鍏ㄩ儴褰掓。
+              View full archive
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </section>
@@ -469,7 +486,7 @@ export default async function HomePage() {
           <section className="glass-card rounded-[2rem] p-5">
             <div className="flex items-center gap-2">
               <Tag className="h-4 w-4 text-[var(--gold)]" />
-              <h3 className="font-serif text-2xl font-semibold tracking-tight">鐑棬鏍囩</h3>
+              <h3 className="font-serif text-2xl font-semibold tracking-tight">Popular Tags</h3>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -479,7 +496,7 @@ export default async function HomePage() {
                   href={`/tags/${encodeURIComponent(tag.tag)}`}
                   className="rounded-full border border-black/8 bg-white/72 px-3 py-2 text-sm text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)]"
                 >
-                  #{tag.tag} 路 {tag.count}
+                  #{tag.tag} · {tag.count}
                 </Link>
               ))}
             </div>
@@ -500,7 +517,7 @@ export default async function HomePage() {
                 recentComments.map((comment) => (
                   <article
                     key={comment.id}
-                    className="rounded-[1.35rem] border border-black/8 bg-[rgba(255,255,255,0.55)] p-4"
+                    className="home-sidebar-card rounded-[1.35rem] p-4"
                   >
                     <div className="flex items-center justify-between gap-3 text-xs text-[var(--ink-soft)]">
                       <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
@@ -519,8 +536,10 @@ export default async function HomePage() {
                   </article>
                 ))
               ) : (
-                <div className="rounded-[1.35rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.5)] p-4 text-sm leading-7 text-[var(--ink-soft)]">
-                  杩欓噷浼氭樉绀烘渶鏂伴€氳繃瀹℃牳鐨勮瘎璁猴紝甯姪璁垮蹇€熺湅鍒版渶杩戠殑浜掑姩鍐呭銆?                </div>
+                <div className="rounded-[1.35rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.62)] p-4 text-sm leading-7 text-[var(--ink-soft)]">
+                  Approved comments will appear here so visitors can quickly catch the latest
+                  conversations on the site.
+                </div>
               )}
             </div>
           </section>

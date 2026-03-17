@@ -35,7 +35,10 @@ export default async function EditSeriesPage({
           <p className="section-kicker">Series</p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Edit series</h1>
         </div>
-        <form action={deleteContentSeriesAction}>
+      <form
+        action={deleteContentSeriesAction}
+        data-confirm-message="Delete this series? Linked posts, notes, and digests will become standalone items."
+      >
           <input type="hidden" name="seriesId" value={series.id} />
           <button type="submit" className="btn-secondary text-rose-700">
             <Trash2 className="h-4 w-4" />
@@ -50,7 +53,12 @@ export default async function EditSeriesPage({
         </div>
       ) : null}
 
-      <SeriesForm action={updateContentSeriesAction} submitLabel="Save changes" series={series} />
+      <SeriesForm
+        action={updateContentSeriesAction}
+        submitLabel="Save changes"
+        confirmMessage="Save changes to this series? Linked content will immediately reflect the updated series metadata."
+        series={series}
+      />
 
       <section className="rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
         <div className="space-y-2">

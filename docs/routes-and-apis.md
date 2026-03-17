@@ -33,6 +33,8 @@ The application currently has five route families:
 - `/notes` - note index
 - `/notes/[slug]` - note detail with backlinks
 - `/journal` - journal index
+- `/gallery` - gallery index
+- `/gallery/[slug]` - gallery detail
 - `/papers` - public papers page
 - `/digest` - digest index
 - `/digest/[slug]` - digest detail
@@ -83,6 +85,9 @@ All `/admin/*` routes require an admin session.
 - `/admin/journal`
 - `/admin/journal/new`
 - `/admin/journal/[id]`
+- `/admin/gallery`
+- `/admin/gallery/new`
+- `/admin/gallery/[id]`
 - `/admin/digests`
 - `/admin/series`
 - `/admin/series/new`
@@ -124,6 +129,7 @@ All `/admin/*` routes require an admin session.
 - `POST /api/chat/transcribe` - validate and execute speech-to-text requests through the selected transcription provider
 - `POST /api/tools/validate` - validate provider/API request settings from the tools UI
 - `POST /api/telemetry/visit` - record page visits for analytics
+- `POST /api/admin/gallery/assets` - upload gallery image assets for the admin form
 - `GET /api/admin/export` - export site data for backup or migration
 
 ## 7. Major Server Action groups
@@ -143,6 +149,7 @@ Many important write flows use Server Actions instead of public HTTP APIs.
 - post create/update
 - note create/update
 - journal create/update
+- gallery create/update/delete
 - scheduled publishing fields
 - revision restore
 - comment create, moderate, and delete
@@ -174,4 +181,5 @@ Many important write flows use Server Actions instead of public HTTP APIs.
 - [architecture.md](./architecture.md)
 - [feature-overview.md](./feature-overview.md)
 - [deployment.md](./deployment.md)
+- [gallery-module.md](./gallery-module.md)
 - [rag-v2.md](./rag-v2.md)

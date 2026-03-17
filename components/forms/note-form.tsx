@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type NoteFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   seriesOptions?: Array<{
     id: string;
     title: string;
@@ -51,7 +52,13 @@ function toDateTimeLocalString(date: Date | null | undefined) {
     .slice(0, 16);
 }
 
-export function NoteForm({ action, submitLabel, seriesOptions = [], note }: NoteFormProps) {
+export function NoteForm({
+  action,
+  submitLabel,
+  confirmMessage,
+  seriesOptions = [],
+  note,
+}: NoteFormProps) {
   const formId = note ? `note-form-${note.id}` : "note-form-new";
   const storageKey = note ? `draft:note:${note.id}` : "draft:note:new";
 
@@ -59,6 +66,7 @@ export function NoteForm({ action, submitLabel, seriesOptions = [], note }: Note
     <form
       id={formId}
       action={action}
+      data-confirm-message={confirmMessage}
       className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       {note ? <input type="hidden" name="noteId" value={note.id} /> : null}

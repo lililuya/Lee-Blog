@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type PaperTopicFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   topic?: {
     id: string;
     name: string;
@@ -14,10 +15,11 @@ type PaperTopicFormProps = {
   } | null;
 };
 
-export function PaperTopicForm({ action, submitLabel, topic }: PaperTopicFormProps) {
+export function PaperTopicForm({ action, submitLabel, confirmMessage, topic }: PaperTopicFormProps) {
   return (
     <form
       action={action}
+      data-confirm-message={confirmMessage}
       className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       {topic ? <input type="hidden" name="topicId" value={topic.id} /> : null}

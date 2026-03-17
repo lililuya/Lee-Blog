@@ -25,7 +25,10 @@ export default async function AdminPapersPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <form action={syncAllPaperTopicsAction}>
+          <form
+            action={syncAllPaperTopicsAction}
+            data-confirm-message="Sync all paper topics now? This can import a large batch of fresh papers."
+          >
             <button type="submit" className="btn-secondary">
               <RefreshCcw className="h-4 w-4" />
               Sync All Topics

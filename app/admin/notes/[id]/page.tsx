@@ -58,7 +58,10 @@ export default async function EditNotePage({
           <p className="section-kicker">Notes</p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Edit evergreen note</h1>
         </div>
-        <form action={deleteNoteAction}>
+        <form
+          action={deleteNoteAction}
+          data-confirm-message="Delete this note? It will be removed from public note listings."
+        >
           <input type="hidden" name="noteId" value={note.id} />
           <button type="submit" className="btn-secondary text-rose-700">
             Delete note
@@ -66,7 +69,13 @@ export default async function EditNotePage({
         </form>
       </div>
 
-      <NoteForm action={updateNoteAction} submitLabel="Save changes" note={note} seriesOptions={seriesOptions} />
+        <NoteForm
+          action={updateNoteAction}
+          submitLabel="Save changes"
+          confirmMessage="Save changes to this note? This will update the stored note and create a new revision snapshot."
+          note={note}
+          seriesOptions={seriesOptions}
+        />
 
       <RevisionHistory
         title="Note revisions"

@@ -44,6 +44,19 @@ function getCommentExcerpt(content: string, maxLength = 220) {
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}...` : normalized;
 }
 
+async function isCommentEmailEnabledForUser(userId: string | null | undefined) {
+  if (!userId || !isDatabaseConfigured()) {
+    return true;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailCommentNotifications: true },
+  });
+
+  return user?.emailCommentNotifications ?? true;
+}
+
 async function getCommentNotificationRecipients() {
   const configured = parseCsv(process.env.COMMENT_NOTIFICATION_EMAILS ?? "").map((value) =>
     value.toLowerCase(),
@@ -198,6 +211,7 @@ export async function notifyAuthorOfCommentReply(input: {
   post: CommentNotificationPost;
   parentComment: Pick<CommentReplyContext, "id" | "content">;
   reply: Pick<CommentNotificationComment, "id" | "content">;
+  recipientUserId?: string | null;
 }) {
   const recipient = input.recipient.email.trim().toLowerCase();
   const replierEmail = input.replier.email.trim().toLowerCase();
@@ -213,6 +227,13 @@ export async function notifyAuthorOfCommentReply(input: {
     return {
       sent: false,
       reason: "self-reply",
+    };
+  }
+
+  if (!(await isCommentEmailEnabledForUser(input.recipientUserId))) {
+    return {
+      sent: false,
+      reason: "preference-disabled",
     };
   }
 
@@ -266,6 +287,7 @@ export async function notifyAuthorOfCommentReview(input: {
   comment: Pick<CommentNotificationComment, "content">;
   post: CommentNotificationPost;
   author: CommentNotificationAuthor;
+  authorUserId?: string | null;
 }) {
   const recipient = input.author.email.trim().toLowerCase();
 
@@ -273,6 +295,13 @@ export async function notifyAuthorOfCommentReview(input: {
     return {
       sent: false,
       reason: "no-recipient",
+    };
+  }
+
+  if (!(await isCommentEmailEnabledForUser(input.authorUserId))) {
+    return {
+      sent: false,
+      reason: "preference-disabled",
     };
   }
 

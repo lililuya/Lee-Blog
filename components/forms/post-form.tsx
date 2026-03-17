@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type PostFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   seriesOptions?: Array<{
     id: string;
     title: string;
@@ -55,7 +56,13 @@ function toDateTimeLocalString(date: Date | null | undefined) {
     .slice(0, 16);
 }
 
-export function PostForm({ action, submitLabel, seriesOptions = [], post }: PostFormProps) {
+export function PostForm({
+  action,
+  submitLabel,
+  confirmMessage,
+  seriesOptions = [],
+  post,
+}: PostFormProps) {
   const formId = post ? `post-form-${post.id}` : "post-form-new";
   const storageKey = post ? `draft:post:${post.id}` : "draft:post:new";
 
@@ -63,6 +70,7 @@ export function PostForm({ action, submitLabel, seriesOptions = [], post }: Post
     <form
       id={formId}
       action={action}
+      data-confirm-message={confirmMessage}
       className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       {post ? <input type="hidden" name="postId" value={post.id} /> : null}

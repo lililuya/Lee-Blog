@@ -143,14 +143,20 @@ export default async function AdminUsersPage({
                     <h3 className="font-semibold text-[var(--ink)]">Role Controls</h3>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {user.status !== "DELETED" && user.role === "READER" ? (
-                        <form action={changeUserRoleAction}>
+                        <form
+                          action={changeUserRoleAction}
+                          data-confirm-message={`Promote ${user.name} to admin? This grants full admin console access.`}
+                        >
                           <input type="hidden" name="userId" value={user.id} />
                           <input type="hidden" name="role" value="ADMIN" />
                           <button type="submit" className="btn-secondary">Promote to admin</button>
                         </form>
                       ) : null}
                       {user.status !== "DELETED" && user.role === "ADMIN" && !isSelf ? (
-                        <form action={changeUserRoleAction}>
+                        <form
+                          action={changeUserRoleAction}
+                          data-confirm-message={`Downgrade ${user.name} to reader? This removes admin console access.`}
+                        >
                           <input type="hidden" name="userId" value={user.id} />
                           <input type="hidden" name="role" value="READER" />
                           <button type="submit" className="btn-secondary">Downgrade to reader</button>
@@ -164,7 +170,11 @@ export default async function AdminUsersPage({
                     <h3 className="font-semibold text-[var(--ink)]">Comment Controls</h3>
                     {user.status === "ACTIVE" && !isSelf ? (
                       <>
-                        <form action={muteUserAction} className="mt-3 space-y-3">
+                        <form
+                          action={muteUserAction}
+                          className="mt-3 space-y-3"
+                          data-confirm-message={`Apply a comment mute to ${user.name}? Make sure the mute length and reason are correct.`}
+                        >
                           <input type="hidden" name="userId" value={user.id} />
                           <div className="grid gap-3 md:grid-cols-[7rem_1fr]">
                             <label className="space-y-2 text-sm text-[var(--ink-soft)]">
@@ -179,14 +189,22 @@ export default async function AdminUsersPage({
                           <button type="submit" className="btn-secondary">Apply mute</button>
                         </form>
                         {muted ? (
-                          <form action={unmuteUserAction} className="mt-3">
+                          <form
+                            action={unmuteUserAction}
+                            className="mt-3"
+                            data-confirm-message={`Remove the current mute for ${user.name}?`}
+                          >
                             <input type="hidden" name="userId" value={user.id} />
                             <button type="submit" className="btn-secondary">Remove mute</button>
                           </form>
                         ) : null}
                       </>
                     ) : muted ? (
-                      <form action={unmuteUserAction} className="mt-3">
+                      <form
+                        action={unmuteUserAction}
+                        className="mt-3"
+                        data-confirm-message={`Remove the current mute for ${user.name}?`}
+                      >
                         <input type="hidden" name="userId" value={user.id} />
                         <button type="submit" className="btn-secondary">Remove mute</button>
                       </form>
@@ -200,7 +218,11 @@ export default async function AdminUsersPage({
                   <section className="rounded-[1.6rem] border border-black/8 bg-white/70 p-4">
                     <h3 className="font-semibold text-[var(--ink)]">Session Controls</h3>
                     {!isSelf ? (
-                      <form action={revokeUserSessionsAction} className="mt-3 space-y-3">
+                      <form
+                        action={revokeUserSessionsAction}
+                        className="mt-3 space-y-3"
+                        data-confirm-message={`Revoke every active session for ${user.name}? They will need to sign in again on all devices.`}
+                      >
                         <input type="hidden" name="userId" value={user.id} />
                         <label className="space-y-2 text-sm text-[var(--ink-soft)]">
                           <span>Reason</span>
@@ -217,7 +239,11 @@ export default async function AdminUsersPage({
                     <h3 className="font-semibold text-[var(--ink)]">Account Status</h3>
                     {user.status === "ACTIVE" && !isSelf ? (
                       <>
-                        <form action={suspendUserAction} className="mt-3 space-y-3">
+                        <form
+                          action={suspendUserAction}
+                          className="mt-3 space-y-3"
+                          data-confirm-message={`Suspend sign-in for ${user.name}? This blocks new logins until the account is restored.`}
+                        >
                           <input type="hidden" name="userId" value={user.id} />
                           <label className="space-y-2 text-sm text-[var(--ink-soft)]">
                             <span>Suspend reason</span>
@@ -225,7 +251,11 @@ export default async function AdminUsersPage({
                           </label>
                           <button type="submit" className="btn-secondary">Suspend sign-in</button>
                         </form>
-                        <form action={deleteUserAction} className="mt-3 space-y-3">
+                        <form
+                          action={deleteUserAction}
+                          className="mt-3 space-y-3"
+                          data-confirm-message={`Soft delete ${user.name}? Their account will be hidden and sign-in will be disabled until restored.`}
+                        >
                           <input type="hidden" name="userId" value={user.id} />
                           <label className="space-y-2 text-sm text-[var(--ink-soft)]">
                             <span>Delete reason</span>
@@ -237,7 +267,11 @@ export default async function AdminUsersPage({
                     ) : null}
 
                     {user.status !== "ACTIVE" ? (
-                      <form action={restoreUserAction} className="mt-3">
+                      <form
+                        action={restoreUserAction}
+                        className="mt-3"
+                        data-confirm-message={`Restore ${user.name}? This will re-enable the account and allow access again.`}
+                      >
                         <input type="hidden" name="userId" value={user.id} />
                         <button type="submit" className="btn-secondary">Restore account</button>
                       </form>

@@ -58,7 +58,10 @@ export default async function EditPostPage({
           <p className="section-kicker">Posts</p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Edit article</h1>
         </div>
-        <form action={deletePostAction}>
+        <form
+          action={deletePostAction}
+          data-confirm-message="Delete this article? It will be removed from the public blog."
+        >
           <input type="hidden" name="postId" value={post.id} />
           <button type="submit" className="btn-secondary text-rose-700">
             Delete article
@@ -66,7 +69,13 @@ export default async function EditPostPage({
         </form>
       </div>
 
-      <PostForm action={updatePostAction} submitLabel="Save changes" post={post} seriesOptions={seriesOptions} />
+        <PostForm
+          action={updatePostAction}
+          submitLabel="Save changes"
+          confirmMessage="Save changes to this article? This will update the live admin record and create a new revision snapshot."
+          post={post}
+          seriesOptions={seriesOptions}
+        />
 
       <RevisionHistory
         title="Post revisions"

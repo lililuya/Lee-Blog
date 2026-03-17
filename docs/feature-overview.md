@@ -24,6 +24,7 @@ The project is best understood as three products merged into one repository:
 - blog posts
 - evergreen notes
 - journal entries
+- gallery albums
 - content series / collections
 - scheduled publishing
 - revision history and restore
@@ -102,6 +103,7 @@ The project is best understood as three products merged into one repository:
 - posts CRUD
 - notes CRUD
 - journal CRUD
+- gallery CRUD
 - digest review surfaces
 - content series management
 - scheduled publish fields

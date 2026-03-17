@@ -21,6 +21,9 @@ export const demoProfile = {
   cvUrl: "https://example.com/cv.pdf",
   heroImageUrl: "",
   backgroundImageUrl: "",
+  backgroundVideoUrl: "",
+  backgroundMediaMode: "IMAGE",
+  backgroundOverlayOpacity: 22,
   assistantAvatarUrl: "",
   researchAreas: [
     "LLM applications",

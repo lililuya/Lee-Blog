@@ -13,11 +13,15 @@ import { changePasswordWithCredentials } from "@/lib/auth-service";
 import { prisma } from "@/lib/prisma";
 import { generateTwoFactorSecret, verifyTwoFactorToken } from "@/lib/two-factor";
 import { isDatabaseConfigured } from "@/lib/utils";
-import { disableTwoFactorSchema, twoFactorTokenSchema } from "@/lib/validators";
+import {
+  commentNotificationSettingsSchema,
+  disableTwoFactorSchema,
+  twoFactorTokenSchema,
+} from "@/lib/validators";
+import { avatarMaxUploadBytes } from "@/lib/upload-config";
 
 const AVATAR_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
 const AVATAR_URL_PREFIX = "/uploads/avatars/";
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 const AVATAR_EXTENSIONS: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -72,6 +76,12 @@ function ensureAccountNotificationSettingsAvailable() {
   }
 }
 
+function ensureAccountCommentNotificationSettingsAvailable() {
+  if (!isDatabaseConfigured()) {
+    redirect("/account?comments=database");
+  }
+}
+
 function ensureAdminAccount(user: { role: UserRole }) {
   if (user.role !== UserRole.ADMIN) {
     redirect("/account?security=admin-only");
@@ -93,7 +103,7 @@ export async function uploadAvatarAction(formData: FormData) {
     redirect("/account?error=no-file");
   }
 
-  if (avatar.size > MAX_AVATAR_BYTES) {
+  if (avatar.size > avatarMaxUploadBytes) {
     redirect("/account?error=file-too-large");
   }
 
@@ -374,4 +384,27 @@ export async function updateEmailPostNotificationsAction(formData: FormData) {
 
   revalidatePath("/account");
   redirect(`/account?updates=${nextValue ? "enabled" : "disabled"}`);
+}
+
+export async function updateCommentNotificationSettingsAction(formData: FormData) {
+  const user = await requireUser();
+  ensureAccountCommentNotificationSettingsAvailable();
+
+  const parsed = commentNotificationSettingsSchema.parse({
+    emailCommentNotifications: formData.get("emailCommentNotifications") === "on",
+    inAppCommentNotifications: formData.get("inAppCommentNotifications") === "on",
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailCommentNotifications: parsed.emailCommentNotifications,
+      inAppCommentNotifications: parsed.inAppCommentNotifications,
+    },
+  });
+
+  revalidatePath("/account");
+  revalidatePath("/account/notifications");
+  revalidatePath("/", "layout");
+  redirect("/account?comments=updated");
 }

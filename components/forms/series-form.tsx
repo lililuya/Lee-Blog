@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 type SeriesFormProps = {
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  confirmMessage?: string;
   series?: {
     id: string;
     title: string;
@@ -14,10 +15,11 @@ type SeriesFormProps = {
   } | null;
 };
 
-export function SeriesForm({ action, submitLabel, series }: SeriesFormProps) {
+export function SeriesForm({ action, submitLabel, confirmMessage, series }: SeriesFormProps) {
   return (
     <form
       action={action}
+      data-confirm-message={confirmMessage}
       className="space-y-6 rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
     >
       {series ? <input type="hidden" name="seriesId" value={series.id} /> : null}

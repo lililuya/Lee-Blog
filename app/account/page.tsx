@@ -9,12 +9,14 @@ import {
   confirmTwoFactorSetupAction,
   disableTwoFactorAction,
   removeAvatarAction,
+  updateCommentNotificationSettingsAction,
   updateEmailPostNotificationsAction,
   uploadAvatarAction,
 } from "@/lib/actions/account-actions";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildTwoFactorOtpauthUri, formatTwoFactorSecret } from "@/lib/two-factor";
+import { avatarMaxUploadLabel } from "@/lib/upload-config";
 import { getUnreadNotificationCount, getUserNotifications } from "@/lib/user-notifications";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,7 @@ type AccountPageSearchParams = {
   error?: string;
   password?: string;
   updates?: string;
+  comments?: string;
   security?: string;
 };
 
@@ -53,7 +56,7 @@ function resolveAvatarFeedback(searchParams: AccountPageSearchParams) {
   if (searchParams.error === "file-too-large") {
     return {
       tone: "error" as const,
-      message: "Avatar files must be 3 MB or smaller.",
+      message: `Avatar files must be ${avatarMaxUploadLabel} or smaller.`,
     };
   }
 
@@ -139,6 +142,24 @@ function resolveUpdatesFeedback(searchParams: AccountPageSearchParams) {
     return {
       tone: "error" as const,
       message: "The database is currently unavailable, so the email preference could not be saved.",
+    };
+  }
+
+  return null;
+}
+
+function resolveCommentNotificationFeedback(searchParams: AccountPageSearchParams) {
+  if (searchParams.comments === "updated") {
+    return {
+      tone: "success" as const,
+      message: "Comment notification preferences were updated.",
+    };
+  }
+
+  if (searchParams.comments === "database") {
+    return {
+      tone: "error" as const,
+      message: "The database is currently unavailable, so comment notification preferences could not be saved.",
     };
   }
 
@@ -255,6 +276,7 @@ export default async function AccountPage({
   const avatarFeedback = resolveAvatarFeedback(resolvedSearchParams);
   const passwordFeedback = resolvePasswordFeedback(resolvedSearchParams);
   const updatesFeedback = resolveUpdatesFeedback(resolvedSearchParams);
+  const commentNotificationFeedback = resolveCommentNotificationFeedback(resolvedSearchParams);
   const securityFeedback = resolveSecurityFeedback(resolvedSearchParams);
   const twoFactorIssuer = process.env.APP_NAME?.trim() || "Lee's daily blog";
   const twoFactorOtpauthUri =
@@ -326,6 +348,22 @@ export default async function AccountPage({
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
+                Comment emails
+              </dt>
+              <dd className="mt-1 text-base text-[var(--ink)]">
+                {currentUser.emailCommentNotifications ? "Enabled" : "Muted"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
+                In-app inbox
+              </dt>
+              <dd className="mt-1 text-base text-[var(--ink)]">
+                {currentUser.inAppCommentNotifications ? "Enabled" : "Muted"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
                 Inbox
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
@@ -352,13 +390,13 @@ export default async function AccountPage({
                 <p className="section-kicker">Avatar</p>
                 <h2 className="font-serif text-3xl font-semibold tracking-tight">Upload your avatar</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                  Use a square image when possible. PNG, JPG/JPEG, and WEBP are supported up to 3 MB.
+                  Use a square image when possible. PNG, JPG/JPEG, and WEBP are supported up to {avatarMaxUploadLabel}.
                 </p>
               </div>
 
               {avatarFeedback ? <FeedbackBanner tone={avatarFeedback.tone} message={avatarFeedback.message} /> : null}
 
-              <form action={uploadAvatarAction} className="space-y-4" encType="multipart/form-data">
+              <form action={uploadAvatarAction} className="space-y-4">
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[var(--ink)]">Choose an image</span>
                   <input
@@ -423,6 +461,69 @@ export default async function AccountPage({
                   </form>
                 </div>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+            <div className="max-w-3xl space-y-6">
+              <div>
+                <p className="section-kicker">Comment alerts</p>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">Comment notification preferences</h2>
+                <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
+                  Control whether the site emails you about replies and moderation decisions, and whether those updates appear in your in-app inbox.
+                </p>
+              </div>
+
+              {commentNotificationFeedback ? (
+                <FeedbackBanner
+                  tone={commentNotificationFeedback.tone}
+                  message={commentNotificationFeedback.message}
+                />
+              ) : null}
+
+              <form action={updateCommentNotificationSettingsAction} className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="emailCommentNotifications"
+                        defaultChecked={currentUser.emailCommentNotifications}
+                        className="mt-1 h-4 w-4 rounded border-black/20 text-[var(--accent-strong)]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--ink)]">Email me about comment updates</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
+                          Receive email when your comment is approved or rejected, or when someone replies to your comment.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        name="inAppCommentNotifications"
+                        defaultChecked={currentUser.inAppCommentNotifications}
+                        className="mt-1 h-4 w-4 rounded border-black/20 text-[var(--accent-strong)]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--ink)]">Show comment updates in inbox</p>
+                        <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
+                          Keep replies, moderation decisions, and submission status updates in your account notification center.
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="rounded-[1.6rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.5)] px-5 py-4 text-sm leading-7 text-[var(--ink-soft)]">
+                  Admin-only moderation inbox and system-level security flows stay enabled even if you mute user-facing comment alerts here.
+                </div>
+
+                <SubmitButton className="px-5">Save comment preferences</SubmitButton>
+              </form>
             </div>
           </section>
 

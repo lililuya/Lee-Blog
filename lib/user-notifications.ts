@@ -62,6 +62,19 @@ function getExcerpt(content: string, maxLength = 160) {
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}...` : normalized;
 }
 
+async function isInAppCommentNotificationEnabledForUser(userId: string) {
+  if (!isDatabaseConfigured()) {
+    return true;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { inAppCommentNotifications: true },
+  });
+
+  return user?.inAppCommentNotifications ?? true;
+}
+
 function dedupeNotifications(inputs: CreateUserNotificationInput[]) {
   const uniqueKeys = new Set<string>();
 
@@ -270,6 +283,10 @@ export async function notifyCommentAuthorOfSubmissionInApp(input: {
   commentId: string;
   post: CommentPostInput;
 }) {
+  if (!(await isInAppCommentNotificationEnabledForUser(input.userId))) {
+    return null;
+  }
+
   const kind = input.isReply ? "reply" : "comment";
   const title =
     input.status === CommentStatus.APPROVED
@@ -306,6 +323,10 @@ export async function notifyCommentAuthorOfReviewInApp(input: {
   commentId: string;
   post: CommentPostInput;
 }) {
+  if (!(await isInAppCommentNotificationEnabledForUser(input.userId))) {
+    return null;
+  }
+
   const kind = input.isReply ? "reply" : "comment";
   const title =
     input.status === CommentStatus.APPROVED
@@ -340,6 +361,10 @@ export async function notifyUserOfApprovedReplyInApp(input: {
   post: CommentPostInput;
 }) {
   if (input.recipientId === input.replierId) {
+    return null;
+  }
+
+  if (!(await isInAppCommentNotificationEnabledForUser(input.recipientId))) {
     return null;
   }
 

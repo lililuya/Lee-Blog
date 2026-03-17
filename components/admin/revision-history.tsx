@@ -99,7 +99,11 @@ export function RevisionHistory({
                   </div>
                 </div>
 
-                <form action={restoreAction} className="w-full max-w-[14rem]">
+                <form
+                  action={restoreAction}
+                  data-confirm-message={`Restore revision v${revision.version} and overwrite the current draft with that snapshot?`}
+                  className="w-full max-w-[14rem]"
+                >
                   <input type="hidden" name={itemIdField} value={itemId} />
                   <input type="hidden" name="revisionId" value={revision.id} />
                   <SubmitButton className="w-full justify-center px-4">

@@ -30,6 +30,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       emailVerificationRequired: false,
       emailPostNotifications: false,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -44,6 +46,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       emailVerificationRequired: false,
       emailPostNotifications: false,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       passwordHash: await hash(adminPassword, 12),
     },
   });
@@ -56,6 +60,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       emailVerificationRequired: false,
       emailPostNotifications: true,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       mutedUntil: null,
       muteReason: null,
       statusReason: null,
@@ -70,6 +76,8 @@ async function main() {
       emailVerifiedAt: new Date(),
       emailVerificationRequired: false,
       emailPostNotifications: true,
+      emailCommentNotifications: true,
+      inAppCommentNotifications: true,
       passwordHash: await hash("ReaderDemo123!", 12),
     },
   });
@@ -84,7 +92,7 @@ async function main() {
       shortBio:
         "大家好，我是Lee，一名对技术充满热情的探索者。我的研究方向主要集中在计算机视觉和大模型部署，喜欢深入挖掘算法的潜力，并探索如何将前沿的AI模型高效地落地到实际应用中。除了工作，我也是个游戏爱好者，喜欢在虚拟世界中体验不同的冒险；同时音乐也是我生活中不可或缺的部分，无论是放松还是激发灵感，耳机里总少不了旋律的陪伴。期待与志同道合的朋友交流分享！",
       longBio:
-        "",
+        "我希望把这个博客做成一个真正长期可运营的个人知识系统，而不只是一个静态主页。除了日常写作，我也会在这里持续整理论文、实验、工程实践和对产品方向的思考，让内容积累、评论互动、自动化能力和后续 AI 工具模块都能自然衔接起来。",
       institution: "Independent Research Lab",
       department: "Applied AI Systems",
       location: "Shanghai / Remote",
@@ -96,6 +104,9 @@ async function main() {
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
       backgroundImageUrl: "",
+      backgroundVideoUrl: "",
+      backgroundMediaMode: "IMAGE",
+      backgroundOverlayOpacity: 22,
       assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",
@@ -135,6 +146,9 @@ async function main() {
       cvUrl: "https://example.com/cv.pdf",
       heroImageUrl: "",
       backgroundImageUrl: "",
+      backgroundVideoUrl: "",
+      backgroundMediaMode: "IMAGE",
+      backgroundOverlayOpacity: 22,
       assistantAvatarUrl: "",
       researchAreas: [
         "LLM applications",

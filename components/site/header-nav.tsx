@@ -9,6 +9,7 @@ import {
   BookOpenText,
   Bookmark,
   FileSearch,
+  Images,
   LayoutDashboard,
   Layers3,
   LogOut,
@@ -42,6 +43,7 @@ const baseItems = [
   { href: "/", label: "Home", icon: Sparkles },
   { href: "/blog", label: "Blog", icon: BookOpenText },
   { href: "/series", label: "Series", icon: Layers3 },
+  { href: "/gallery", label: "Gallery", icon: Images },
   { href: "/archive", label: "Archive", icon: Archive },
   { href: "/notes", label: "Notes", icon: NotebookPen },
   { href: "/journal", label: "Journal", icon: PenSquare },
@@ -108,85 +110,91 @@ export function HeaderNav({
     <>
       {mode !== "mobile" ? (
         <div className="site-side-rail hidden min-[1400px]:flex">
-          <nav className="site-side-rail__nav" aria-label="Primary">
-            {items.map(({ href, label, icon: Icon }) => {
-              const active = isActive(pathname, href);
+          <div className="site-side-rail__scroll-shell">
+            <nav className="site-side-rail__nav" aria-label="Primary">
+              {items.map(({ href, label, icon: Icon }) => {
+                const active = isActive(pathname, href);
 
-              return (
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn("site-side-rail__item", active && "site-side-rail__item--active")}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={label}
+                    title={label}
+                  >
+                    <span className="site-side-rail__icon">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="site-side-rail__label">{label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          <div className="site-side-rail__utility-dock">
+            <div className="site-side-rail__tools" role="group" aria-label="Quick actions">
+              {isSignedIn ? (
                 <Link
-                  key={href}
-                  href={href}
-                  className={cn("site-side-rail__item", active && "site-side-rail__item--active")}
-                  aria-current={active ? "page" : undefined}
-                  aria-label={label}
-                >
-                  <span className="site-side-rail__icon">
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="site-side-rail__label">{label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="site-side-rail__tools" role="group" aria-label="Quick actions">
-            {isSignedIn ? (
-              <Link
-                href="/account/notifications"
-                className={cn(
-                  "site-side-rail__tool",
-                  isActive(pathname, "/account/notifications") && "site-side-rail__tool--active",
-                )}
-                aria-label={
-                  unreadNotificationCount > 0
-                    ? `Inbox, ${unreadNotificationCount} unread notifications`
-                    : "Inbox"
-                }
-                title="Inbox"
-              >
-                <span className="site-side-rail__tool-icon" aria-hidden="true">
-                  <Bell className="h-4 w-4" />
-                </span>
-                {notificationCount ? (
-                  <span className="site-side-rail__count" aria-hidden="true">
-                    {formatUnreadCount(notificationCount)}
-                  </span>
-                ) : null}
-                <span className="site-side-rail__tool-label">Inbox</span>
-              </Link>
-            ) : null}
-            {isAdmin ? (
-              <Link
-                href="/admin"
-                className="site-side-rail__tool"
-                aria-label="Admin Console"
-                title="Admin Console"
-              >
-                <span className="site-side-rail__tool-icon" aria-hidden="true">
-                  <LayoutDashboard className="h-4 w-4" />
-                </span>
-                <span className="site-side-rail__tool-label">Admin Console</span>
-              </Link>
-            ) : null}
-            {isSignedIn ? (
-              <form action={logoutAction}>
-                <button
-                  type="submit"
-                  className="site-side-rail__tool"
-                  aria-label="Sign out"
-                  title="Sign out"
+                  href="/account/notifications"
+                  className={cn(
+                    "site-side-rail__tool",
+                    isActive(pathname, "/account/notifications") && "site-side-rail__tool--active",
+                  )}
+                  aria-label={
+                    unreadNotificationCount > 0
+                      ? `Inbox, ${unreadNotificationCount} unread notifications`
+                      : "Inbox"
+                  }
+                  title="Inbox"
                 >
                   <span className="site-side-rail__tool-icon" aria-hidden="true">
-                    <LogOut className="h-4 w-4" />
+                    <Bell className="h-4 w-4" />
                   </span>
-                  <span className="site-side-rail__tool-label">Sign Out</span>
-                </button>
-              </form>
-            ) : null}
-            <ThemeToggle variant="rail" />
+                  {notificationCount ? (
+                    <span className="site-side-rail__count" aria-hidden="true">
+                      {formatUnreadCount(notificationCount)}
+                    </span>
+                  ) : null}
+                  <span className="site-side-rail__tool-label">Inbox</span>
+                </Link>
+              ) : null}
+              {isAdmin ? (
+                <Link
+                  href="/admin"
+                  className={cn("site-side-rail__tool", isActive(pathname, "/admin") && "site-side-rail__tool--active")}
+                  aria-label="Admin Console"
+                  title="Admin Console"
+                >
+                  <span className="site-side-rail__tool-icon" aria-hidden="true">
+                    <LayoutDashboard className="h-4 w-4" />
+                  </span>
+                  <span className="site-side-rail__tool-label">Admin Console</span>
+                </Link>
+              ) : null}
+              {isSignedIn ? (
+                <form action={logoutAction}>
+                  <button
+                    type="submit"
+                    className="site-side-rail__tool"
+                    aria-label="Sign out"
+                    title="Sign out"
+                  >
+                    <span className="site-side-rail__tool-icon" aria-hidden="true">
+                      <LogOut className="h-4 w-4" />
+                    </span>
+                    <span className="site-side-rail__tool-label">Sign Out</span>
+                  </button>
+                </form>
+              ) : null}
+              <ThemeToggle variant="rail" />
+            </div>
+
             <button
               type="button"
-              className="site-side-rail__tool"
+              className="site-side-rail__backtop"
               onClick={scrollToTop}
               aria-label="Scroll to top"
               title="Scroll to top"

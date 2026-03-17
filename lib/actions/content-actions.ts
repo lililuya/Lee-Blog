@@ -1,10 +1,10 @@
 ﻿"use server";
 
-import { unlink } from "node:fs/promises";
 import { CommentStatus, PostStatus, UserRole, UserStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
+import { saveAdminProfileFromFormData } from "@/lib/admin-profile";
 import { ADMIN_AUDIT_ACTIONS, buildAdminAuditLogData } from "@/lib/audit";
 import { evaluateCommentModeration } from "@/lib/comment-moderation";
 import {
@@ -15,7 +15,6 @@ import {
 import { snapshotNoteRevision, snapshotPostRevision } from "@/lib/content-revisions";
 import { notifySubscribersOfPublishedPost } from "@/lib/post-notifications";
 import { hasCommentReplySupport, prisma } from "@/lib/prisma";
-import { deleteLocalSiteAsset, storeSiteImageUpload } from "@/lib/site-assets";
 import {
   notifyAdminsInAppOfNewComment,
   notifyCommentAuthorOfReviewInApp,
@@ -33,7 +32,6 @@ import {
   noteRevisionRestoreSchema,
   postSchema,
   postRevisionRestoreSchema,
-  profileSchema,
   providerSchema,
 } from "@/lib/validators";
 
@@ -65,6 +63,7 @@ function ensureDatabase() {
     throw new Error("DATABASE_URL is not configured.");
   }
 }
+
 
 async function safeRunCommentNotification(label: string, task: () => Promise<unknown>) {
   try {
@@ -701,80 +700,8 @@ export async function deleteJournalAction(formData: FormData) {
 
 export async function saveProfileAction(formData: FormData) {
   await requireAdmin();
-  ensureDatabase();
-
-  const existingProfile = await prisma.siteProfile.findUnique({
-    where: { id: "main" },
-    select: {
-      backgroundImageUrl: true,
-    },
-  });
-
-  const parsed = profileSchema.parse({
-    fullName: getString(formData, "fullName"),
-    headline: getString(formData, "headline"),
-    tagline: getString(formData, "tagline"),
-    shortBio: getString(formData, "shortBio"),
-    longBio: getString(formData, "longBio"),
-    institution: getOptionalString(formData, "institution") ?? undefined,
-    department: getOptionalString(formData, "department") ?? undefined,
-    location: getOptionalString(formData, "location") ?? undefined,
-    email: getOptionalString(formData, "email") ?? undefined,
-    websiteUrl: getOptionalString(formData, "websiteUrl"),
-    githubUrl: getOptionalString(formData, "githubUrl"),
-    linkedinUrl: getOptionalString(formData, "linkedinUrl"),
-    scholarUrl: getOptionalString(formData, "scholarUrl"),
-    cvUrl: getOptionalString(formData, "cvUrl"),
-    heroImageUrl: getOptionalString(formData, "heroImageUrl"),
-    backgroundImageUrl: getOptionalString(formData, "backgroundImageUrl"),
-    assistantAvatarUrl: getOptionalString(formData, "assistantAvatarUrl"),
-    researchAreas: parseCsv(getString(formData, "researchAreas")),
-    educationMarkdown: getString(formData, "educationMarkdown"),
-    experienceMarkdown: getString(formData, "experienceMarkdown"),
-    awardsMarkdown: getString(formData, "awardsMarkdown"),
-    speakingMarkdown: getString(formData, "speakingMarkdown"),
-  });
-
-  const clearBackgroundImage = getBoolean(formData, "clearBackgroundImage");
-  const backgroundImageFile = formData.get("backgroundImageFile");
-  const uploadedBackgroundImage =
-    !clearBackgroundImage && backgroundImageFile instanceof File && backgroundImageFile.size > 0
-      ? await storeSiteImageUpload(backgroundImageFile, "background")
-      : null;
-
-  const nextBackgroundImageUrl = clearBackgroundImage
-    ? null
-    : uploadedBackgroundImage?.url ?? parsed.backgroundImageUrl ?? null;
-
-  try {
-    await prisma.siteProfile.upsert({
-      where: { id: "main" },
-      update: {
-        ...parsed,
-        backgroundImageUrl: nextBackgroundImageUrl,
-      },
-      create: {
-        id: "main",
-        ...parsed,
-        backgroundImageUrl: nextBackgroundImageUrl,
-      },
-    });
-  } catch (error) {
-    if (uploadedBackgroundImage) {
-      await unlink(uploadedBackgroundImage.diskPath).catch(() => null);
-    }
-
-    throw error;
-  }
-
-  if (existingProfile?.backgroundImageUrl !== nextBackgroundImageUrl) {
-    await deleteLocalSiteAsset(existingProfile?.backgroundImageUrl);
-  }
-
-  revalidatePath("/");
-  revalidatePath("/", "layout");
-  revalidatePath("/admin/profile");
-  redirect("/admin/profile?saved=1");
+  const result = await saveAdminProfileFromFormData(formData);
+  redirect(result.redirectPath);
 }
 
 export async function createProviderAction(formData: FormData) {
@@ -920,6 +847,7 @@ export async function moderateCommentAction(formData: FormData) {
           name: comment.author.name,
           email: comment.author.email,
         },
+        authorUserId: comment.authorId,
       }),
     );
 
@@ -964,6 +892,7 @@ export async function moderateCommentAction(formData: FormData) {
           name: parentCommentForNotification.author.name,
           email: parentCommentForNotification.author.email,
         },
+        recipientUserId: parentCommentForNotification.author.id,
         replier: {
           name: comment.author.name,
           email: comment.author.email,
@@ -1120,8 +1049,7 @@ export async function createCommentAction(formData: FormData) {
     parsed.parentId &&
     (!parentComment ||
       parentComment.postId !== parsed.postId ||
-      parentComment.status !== CommentStatus.APPROVED ||
-      parentComment.parentId !== null)
+      parentComment.status !== CommentStatus.APPROVED)
   ) {
     redirectToCommentFeedback(postSlug, "reply-unavailable");
   }
@@ -1278,6 +1206,7 @@ export async function createCommentAction(formData: FormData) {
           name: parentComment.author.name,
           email: parentComment.author.email,
         },
+        recipientUserId: parentComment.author.id,
         replier: {
           name: user.name,
           email: user.email,

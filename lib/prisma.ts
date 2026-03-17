@@ -26,6 +26,11 @@ function hasExpectedDelegates(client: PrismaClient) {
   return getExpectedDelegates().every((delegate) => prismaRecord[delegate] !== undefined);
 }
 
+function hasDelegate(client: PrismaClient, delegate: string) {
+  const prismaRecord = client as unknown as Record<string, unknown>;
+  return prismaRecord[delegate] !== undefined;
+}
+
 function createClient() {
   if (!process.env.DATABASE_URL) {
     return {} as PrismaClient;
@@ -52,6 +57,17 @@ function createClient() {
 export function hasCommentReplySupport() {
   const commentModel = Prisma.dmmf.datamodel.models.find((model) => model.name === "Comment");
   return commentModel?.fields.some((field) => field.name === "parentId") ?? false;
+}
+
+export function hasSiteProfileBackgroundMediaModeSupport() {
+  const siteProfileModel = Prisma.dmmf.datamodel.models.find(
+    (model) => model.name === "SiteProfile",
+  );
+  return siteProfileModel?.fields.some((field) => field.name === "backgroundMediaMode") ?? false;
+}
+
+export function hasGalleryAlbumSupport() {
+  return hasDelegate(prisma, "galleryAlbum") && hasDelegate(prisma, "galleryImage");
 }
 
 const prismaSignature = getCurrentPrismaSignature();

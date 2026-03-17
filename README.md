@@ -7,6 +7,7 @@ A self-managed full-stack academic blog, research workspace, and AI-ready publis
 ## Highlights / 版本亮点
 
 - Publishing and discovery: blog posts, notes, journal entries, content series, archive, tags, categories, related posts, search, RSS, and JSON Feed.
+- Visual publishing: standalone gallery albums with ordered images, captions, direct upload support, and public gallery pages.
 - 发布与发现：博客、常青笔记、日志、内容系列、归档、标签、分类、相关文章、站内搜索、RSS 与 JSON Feed。
 
 - Research workflow: daily arXiv topic sync, personal paper library, annotations, reading progress, backlinks, weekly digests, citation copy, and BibTeX export.
@@ -81,6 +82,7 @@ Public / 前台：
 - `/papers`, `/papers/library`
 - `/digest`, `/digest/[slug]`
 - `/search`
+- `/gallery`, `/gallery/[slug]`
 - `/tools`
 - `/account`, `/account/notifications`
 - `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`
@@ -89,6 +91,7 @@ Admin / 后台：
 
 - `/admin`
 - `/admin/posts`, `/admin/notes`, `/admin/journal`
+- `/admin/gallery`
 - `/admin/comments`, `/admin/comments/rules`
 - `/admin/users`, `/admin/audit`
 - `/admin/profile`, `/admin/providers`
@@ -130,11 +133,15 @@ Core product docs / 核心文档：
 - [docs/routes-and-apis.zh-CN.md](./docs/routes-and-apis.zh-CN.md)
 - [docs/deployment.md](./docs/deployment.md)
 - [docs/deployment.zh-CN.md](./docs/deployment.zh-CN.md)
+- [docs/github-release-workflow.md](./docs/github-release-workflow.md)
+- [docs/github-release-workflow.zh-CN.md](./docs/github-release-workflow.zh-CN.md)
 
 Content and research workflows / 内容与研究工作流：
 
 - [docs/content-update-workflow.md](./docs/content-update-workflow.md)
 - [docs/content-update-workflow.zh-CN.md](./docs/content-update-workflow.zh-CN.md)
+- [docs/gallery-module.md](./docs/gallery-module.md)
+- [docs/gallery-module.zh-CN.md](./docs/gallery-module.zh-CN.md)
 - [docs/notes-sync.md](./docs/notes-sync.md)
 - [docs/notes-sync.zh-CN.md](./docs/notes-sync.zh-CN.md)
 - [docs/papers-operations.md](./docs/papers-operations.md)

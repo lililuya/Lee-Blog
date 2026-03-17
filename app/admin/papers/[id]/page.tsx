@@ -29,17 +29,28 @@ export default async function EditPaperTopicPage({
           <h1 className="font-serif text-4xl font-semibold tracking-tight">Edit Paper Topic</h1>
         </div>
         <div className="flex flex-wrap gap-3">
-          <form action={syncSinglePaperTopicAction}>
+        <form
+          action={syncSinglePaperTopicAction}
+          data-confirm-message="Sync this topic now? New papers may be pulled into the feed immediately."
+        >
             <input type="hidden" name="topicId" value={topic.id} />
             <button type="submit" className="btn-secondary">Sync This Topic Now</button>
           </form>
-          <form action={deletePaperTopicAction}>
+        <form
+          action={deletePaperTopicAction}
+          data-confirm-message="Delete this paper topic? Future sync runs will stop tracking it."
+        >
             <input type="hidden" name="topicId" value={topic.id} />
             <button type="submit" className="btn-secondary text-rose-700">Delete Topic</button>
           </form>
         </div>
       </div>
-      <PaperTopicForm action={updatePaperTopicAction} submitLabel="Save Changes" topic={topic} />
+      <PaperTopicForm
+        action={updatePaperTopicAction}
+        submitLabel="Save Changes"
+        confirmMessage="Save changes to this paper topic? Future sync jobs will use the updated query and limits."
+        topic={topic}
+      />
     </div>
   );
 }

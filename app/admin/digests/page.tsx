@@ -31,7 +31,10 @@ export default async function AdminDigestsPage({
             Turn one week of papers, journals, and published posts into a public digest, then optionally attach it to a long-running series.
           </p>
         </div>
-        <form action={generateWeeklyDigestAction}>
+        <form
+          action={generateWeeklyDigestAction}
+          data-confirm-message="Generate this week's digest now? Existing content for the current period may be refreshed."
+        >
           <button type="submit" className="btn-primary">
             <RefreshCcw className="h-4 w-4" />
             Generate this week&apos;s digest
@@ -77,7 +80,11 @@ export default async function AdminDigestsPage({
                   Papers {digest.paperCount} / Journal {digest.journalCount} / Posts {digest.postCount}
                 </td>
                 <td className="px-6 py-4">
-                  <form action={updateWeeklyDigestSeriesAction} className="space-y-3">
+                  <form
+                    action={updateWeeklyDigestSeriesAction}
+                    data-confirm-message={`Save series settings for "${digest.title}"? This will update how the digest is grouped publicly.`}
+                    className="space-y-3"
+                  >
                     <input type="hidden" name="digestId" value={digest.id} />
                     <select name="seriesId" defaultValue={digest.seriesId ?? ""} className="field min-w-56">
                       <option value="">Standalone digest</option>
@@ -117,7 +124,10 @@ export default async function AdminDigestsPage({
                       <Eye className="h-4 w-4" />
                       View
                     </Link>
-                    <form action={deleteWeeklyDigestAction}>
+                    <form
+                      action={deleteWeeklyDigestAction}
+                      data-confirm-message={`Delete "${digest.title}"? This will remove the digest from the site.`}
+                    >
                       <input type="hidden" name="digestId" value={digest.id} />
                       <button type="submit" className="inline-flex items-center gap-2 font-semibold text-rose-700">
                         <Trash2 className="h-4 w-4" />
