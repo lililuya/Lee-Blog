@@ -117,3 +117,52 @@ export async function getAdminPaperLibraryOverview() {
     annotations,
   };
 }
+
+export async function getPaperHighlightInsertionsForUser(userId: string, limit = 18) {
+  if (!isDatabaseConfigured()) {
+    return [];
+  }
+
+  const annotations = await prisma.paperAnnotation.findMany({
+    where: {
+      userId,
+      quote: {
+        not: null,
+      },
+    },
+    select: {
+      id: true,
+      quote: true,
+      content: true,
+      createdAt: true,
+      libraryItem: {
+        select: {
+          title: true,
+          authors: true,
+          paperUrl: true,
+          arxivId: true,
+          primaryCategory: true,
+          publishedAt: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: limit,
+  });
+
+  return annotations
+    .map((annotation) => ({
+      id: annotation.id,
+      title: annotation.libraryItem.title,
+      authors: annotation.libraryItem.authors,
+      paperUrl: annotation.libraryItem.paperUrl,
+      arxivId: annotation.libraryItem.arxivId,
+      primaryCategory: annotation.libraryItem.primaryCategory,
+      publishedAt: annotation.libraryItem.publishedAt?.toISOString() ?? null,
+      quote: annotation.quote?.trim() ?? "",
+      note: annotation.content.trim() || null,
+    }))
+    .filter((annotation) => annotation.quote.length > 0);
+}

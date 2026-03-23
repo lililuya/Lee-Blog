@@ -48,8 +48,9 @@ A self-managed full-stack academic blog, admin workspace, and AI-ready publishin
 2. Fill in database, app URL, session secret, and admin credentials.
 3. Install dependencies: `npm ci`
 4. Sync Prisma schema: `npm run db:push`
-5. Seed admin and demo data: `npm run db:seed`
-6. Start local development: `npm run dev`
+5. Bootstrap the admin account and base site profile: `npm run db:bootstrap`
+6. Optional local sample content: `npm run db:seed:demo`
+7. Start local development: `npm run dev`
 
 本地首次启动推荐顺序：
 
@@ -57,8 +58,9 @@ A self-managed full-stack academic blog, admin workspace, and AI-ready publishin
 2. 填好数据库、站点地址、会话密钥与管理员账号
 3. 安装依赖：`npm ci`
 4. 同步 Prisma 结构：`npm run db:push`
-5. 初始化管理员与演示数据：`npm run db:seed`
-6. 启动开发环境：`npm run dev`
+5. 初始化管理员账号和站点基础资料：`npm run db:bootstrap`
+6. 如需本地演示内容，再执行：`npm run db:seed:demo`
+7. 启动开发环境：`npm run dev`
 
 ## Common Commands / 常用命令
 
@@ -68,7 +70,10 @@ A self-managed full-stack academic blog, admin workspace, and AI-ready publishin
 - `npm run db:generate`
 - `npm run db:push`
 - `npm run db:migrate`
+- `npm run db:migrate:deploy`
+- `npm run db:bootstrap`
 - `npm run db:seed`
+- `npm run db:seed:demo`
 - `npm run db:studio`
 - `npm run content:sync`
 - `npm run content:watch`
@@ -183,9 +188,17 @@ Background and operations docs / 背景学习与运维文档：
 
 - Admin: `admin@example.com` / `ChangeMe123!`
 
-If you change admin-related values in `.env`, run `npm run db:seed` again.
+`npm run db:bootstrap` only creates missing admin/profile records and will not overwrite an existing admin password, name, or site profile.
 
-如果你修改了 `.env` 里的管理员信息，请重新执行一次 `npm run db:seed`。
+If you want local sample content, run `npm run db:seed:demo`.
+
+If you change admin-related values in `.env` after bootstrap, update the existing admin/profile manually instead of rerunning the seed to overwrite them.
+
+`npm run db:bootstrap` 只会补齐缺失的管理员和站点资料，不会覆盖已有管理员的密码、名称或站点 Profile。
+
+如果需要本地演示内容，请执行 `npm run db:seed:demo`。
+
+如果你在 bootstrap 之后修改了 `.env` 里的管理员信息，请通过后台或数据库手动更新现有管理员 / Profile，而不是重新跑种子去覆盖它们。
 
 ## Notes / 说明
 

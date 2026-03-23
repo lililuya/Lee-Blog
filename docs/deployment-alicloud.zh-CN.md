@@ -256,7 +256,7 @@ docker compose -f docker-compose.prod.yml run --rm app npm run db:push
 ### 7.4 初始化管理员账号和演示数据
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm app npm run db:seed
+docker compose -f docker-compose.prod.yml run --rm app npm run db:bootstrap
 ```
 
 ### 7.5 启动应用
@@ -444,7 +444,7 @@ docker compose -f docker-compose.prod.yml up -d app
 如果你改了管理员默认账号、种子数据，或者需要恢复默认管理员状态：
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm app npm run db:seed
+docker compose -f docker-compose.prod.yml run --rm app npm run db:bootstrap
 ```
 
 ## 12. 定时任务：每日论文和每周 Digest
@@ -490,7 +490,7 @@ crontab -e
 4. 写入 `.env`
 5. 拉取镜像
 6. 执行 `db:push`
-7. 执行 `db:seed`
+7. 执行 `db:bootstrap`
 8. 启动应用
 
 ### 13.1 适合什么时候启用
@@ -571,7 +571,7 @@ docker exec -t $(docker ps --format '{{.Names}}' | grep db) pg_dump -U postgres 
 如果你改过管理员账号配置，记得重新执行：
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm app npm run db:seed
+docker compose -f docker-compose.prod.yml run --rm app npm run db:bootstrap
 ```
 
 ### 15.4 数据库连不上

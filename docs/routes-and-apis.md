@@ -76,6 +76,7 @@ All `/admin/*` routes require an admin session.
 - `/admin/posts`
 - `/admin/posts/new`
 - `/admin/posts/[id]`
+- `/admin/categories`
 - `/admin/notes`
 - `/admin/notes/new`
 - `/admin/notes/[id]`
@@ -144,6 +145,7 @@ Many important write flows use Server Actions instead of public HTTP APIs.
 ### Content actions
 
 - post create/update
+- post category rename / merge
 - note create/update
 - journal create/update
 - gallery create/update/delete

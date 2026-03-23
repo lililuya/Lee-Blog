@@ -118,7 +118,7 @@ function readStoredDraft(storageKey: string) {
 
 function formatTime(value: number | null) {
   if (!value) {
-    return "Not saved yet";
+    return "尚未保存";
   }
 
   return new Intl.DateTimeFormat("zh-CN", {
@@ -279,14 +279,14 @@ export function DraftAutosave({ formId, storageKey, fields }: DraftAutosaveProps
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 font-semibold text-[var(--ink)]">
             <ShieldCheck className="h-4 w-4 text-[var(--accent)]" />
-            Draft auto-save is on
+            已开启草稿自动保存
           </div>
           <p className="leading-7">
-            Changes in this editor are saved to your browser locally as a safety net.
+            这个编辑器里的更改会先保存在当前浏览器本地，作为额外保险。
           </p>
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
             <History className="h-3.5 w-3.5" />
-            Latest local draft: {formatTime(savedAt)}
+            最近一次本地草稿：{formatTime(savedAt)}
           </div>
         </div>
 
@@ -294,11 +294,11 @@ export function DraftAutosave({ formId, storageKey, fields }: DraftAutosaveProps
           <div className="flex flex-wrap gap-3">
             <button type="button" className="btn-secondary" onClick={restoreDraft}>
               <RotateCcw className="h-4 w-4" />
-              Restore draft
+              恢复草稿
             </button>
             <button type="button" className="btn-ghost text-[var(--ink-soft)]" onClick={discardDraft}>
               <Trash2 className="h-4 w-4" />
-              Discard
+              丢弃
             </button>
           </div>
         ) : null}

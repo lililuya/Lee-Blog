@@ -33,7 +33,7 @@ export function PasswordResetRequestForm() {
         if (!response.ok || !data.ok) {
           setFeedback({
             tone: "error",
-            message: data.error ?? "Could not start the password reset flow.",
+            message: data.error ?? "无法发起密码重置流程。",
           });
           return;
         }
@@ -42,14 +42,14 @@ export function PasswordResetRequestForm() {
         setFeedback({
           tone: "success",
           message: data.resetUrl
-            ? "A password reset link was prepared. Email delivery is not configured yet, so use the link below."
-            : "If an account with that email exists, a password reset link has been prepared.",
+            ? "已生成密码重置链接。当前还未配置邮件投递，请先使用下方链接。"
+            : "如果该邮箱对应的账号存在，系统已经准备好了密码重置链接。",
           resetUrl: data.resetUrl ?? null,
         });
       } catch {
         setFeedback({
           tone: "error",
-          message: "Could not start the password reset flow. Please try again.",
+          message: "无法发起密码重置流程，请稍后再试。",
         });
       }
     });
@@ -58,10 +58,10 @@ export function PasswordResetRequestForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+      className="editorial-form-shell space-y-5 md:p-7"
     >
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--ink)]">Email</span>
+        <span className="text-sm font-semibold text-[var(--ink)]">邮箱</span>
         <input name="email" type="email" required className="field" placeholder="you@example.com" />
       </label>
 
@@ -79,7 +79,7 @@ export function PasswordResetRequestForm() {
               href={feedback.resetUrl}
               className="mt-2 inline-flex break-all font-semibold text-[var(--accent-strong)]"
             >
-              Open password reset link
+              打开重置链接
             </a>
           ) : null}
         </div>
@@ -91,7 +91,7 @@ export function PasswordResetRequestForm() {
         disabled={isPending}
       >
         {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        Send reset link
+        发送重置链接
       </button>
     </form>
   );

@@ -17,63 +17,63 @@ function resolveProfileFeedback(searchParams: AdminProfilePageSearchParams) {
   if (searchParams.saved) {
     return {
       tone: "success" as const,
-      message: "Homepage profile settings were saved successfully.",
+      message: "首页资料设置已成功保存。",
     };
   }
 
   if (searchParams.error === "validation") {
     return {
       tone: "error" as const,
-      message: "Some profile fields are still invalid. Please review the form and try again.",
+      message: "部分资料字段仍然无效，请检查表单后重试。",
     };
   }
 
   if (searchParams.error === "image-too-large") {
     return {
       tone: "error" as const,
-      message: "The background image is larger than the current upload limit.",
+      message: "背景图片超过了当前允许的上传大小限制。",
     };
   }
 
   if (searchParams.error === "invalid-image-type") {
     return {
       tone: "error" as const,
-      message: "Background images must be PNG, JPG/JPEG, or WEBP files.",
+      message: "背景图片必须是 PNG、JPG/JPEG 或 WEBP 格式。",
     };
   }
 
   if (searchParams.error === "video-too-large") {
     return {
       tone: "error" as const,
-      message: "The background video is larger than the current upload limit.",
+      message: "背景视频超过了当前允许的上传大小限制。",
     };
   }
 
   if (searchParams.error === "invalid-video-type") {
     return {
       tone: "error" as const,
-      message: "Animated backgrounds currently support MP4 and WEBM files only.",
+      message: "动态背景目前只支持 MP4 和 WEBM 格式。",
     };
   }
 
   if (searchParams.error === "video-processing-failed") {
     return {
       tone: "error" as const,
-      message: "The uploaded video could not be compressed successfully. Please try another file.",
+      message: "上传的视频无法成功压缩，请换一个文件再试。",
     };
   }
 
   if (searchParams.error === "upload") {
     return {
       tone: "error" as const,
-      message: "The background media upload failed. Please try again.",
+      message: "背景媒体上传失败，请稍后再试。",
     };
   }
 
   if (searchParams.error === "save") {
     return {
       tone: "error" as const,
-      message: "The profile could not be saved right now. Please try again.",
+      message: "资料暂时无法保存，请稍后再试。",
     };
   }
 
@@ -111,9 +111,9 @@ export default async function AdminProfilePage({
   return (
     <div className="space-y-6">
       <div>
-        <p className="section-kicker">Profile</p>
+        <p className="section-kicker">资料</p>
         <h1 className="font-serif text-4xl font-semibold tracking-tight">
-          Homepage Profile Settings
+          首页资料设置
         </h1>
       </div>
 
@@ -121,7 +121,7 @@ export default async function AdminProfilePage({
 
       <ProfileForm
         action="/api/admin/profile"
-        confirmMessage="Save homepage profile settings? This will update the public profile, avatar, and current background configuration."
+        confirmMessage="确认保存首页资料设置吗？这会更新公开资料、助手头像和当前背景配置。"
         uploadLimits={{
           imageMaxUploadLabel: siteImageMaxUploadLabel,
           videoMaxUploadLabel: siteVideoMaxUploadLabel,

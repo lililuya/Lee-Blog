@@ -11,9 +11,11 @@
 | 后台表单里改内容 | `/admin/*` 页面 | 点击保存 | 通常自动更新，必要时手动刷新 | 不需要 |
 | Markdown 文章 / 笔记 / 日志 | `content/blog`、`content/notes`、`content/journal` | 运行 `npm run content:sync` 或 `npm run content:watch` | 需要 | 不需要 |
 | 数据库结构 / Prisma 模型 | `prisma/schema.prisma` | 运行 `npm run db:push` | 需要 | 建议重启 `npm run dev` |
-| 默认管理员 / 种子数据 | `prisma/seed.ts`、`.env` 中管理员信息 | 运行 `npm run db:seed` | 可能需要 | 视情况而定 |
+| 初始化管理员 / 可选演示数据 | `prisma/seed.ts`、`.env` 中管理员信息 | 运行 `npm run db:bootstrap` 或 `npm run db:seed:demo` | 可能需要 | 视情况而定 |
 | 环境变量 | `.env`、`.env.example` | 重启开发或生产服务 | 需要 | 必须重启 |
 | API / Server Action / 查询逻辑 | `app/api`、`lib/actions`、`lib/queries` | 保存文件后重新走一遍对应流程 | 通常需要 | 一般不需要 |
+
+如果是在已初始化过的数据库里修改 `ADMIN_*`，`db:bootstrap` 不会覆盖现有管理员记录，这时请通过后台或数据库手动更新。
 
 ## 2. 本地开发时最常见的情况
 
@@ -135,7 +137,7 @@ npm run db:push
 这类改动要重新执行：
 
 ```bash
-npm run db:seed
+npm run db:bootstrap
 ```
 
 ## 8. 改 `.env` 环境变量时怎么做
@@ -224,7 +226,7 @@ docker compose -f docker-compose.prod.yml up -d app
 ### 12.3 改了种子数据或管理员默认账号
 
 ```bash
-docker compose -f docker-compose.prod.yml run --rm app npm run db:seed
+docker compose -f docker-compose.prod.yml run --rm app npm run db:bootstrap
 ```
 
 ### 12.4 改了 Markdown 内容并且文件就在服务器上
@@ -240,7 +242,7 @@ docker compose -f docker-compose.prod.yml run --rm app npm run content:sync
 - 改 UI 文案 / 标题 / 样式：保存后刷新浏览器
 - 改 Markdown：先 `npm run content:sync`，再刷新
 - 改 Prisma：先 `npm run db:push`
-- 改管理员默认数据：`npm run db:seed`
+- 初始化缺失管理员：`npm run db:bootstrap`
 - 改 `.env`：必须重启服务
 - 改线上代码：必须重新部署
 

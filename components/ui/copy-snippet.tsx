@@ -50,7 +50,7 @@ export function CopySnippet({
         <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
         <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={handleCopy}>
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? "已复制" : "复制"}
         </button>
       </div>
       <textarea

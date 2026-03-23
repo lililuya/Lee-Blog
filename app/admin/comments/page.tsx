@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { deleteCommentAction, moderateCommentAction } from "@/lib/actions/content-actions";
 import { getAdminComments } from "@/lib/queries";
+import { formatCommentStatusLabel } from "@/lib/ui-labels";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,15 +13,14 @@ export default async function AdminCommentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="section-kicker">Comments</p>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight">Comment Moderation</h1>
+          <p className="section-kicker">评论</p>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight">评论审核</h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">
-            New reader comments can trigger email alerts for admins, and approving or rejecting a
-            comment also emails the author when mail delivery is available.
+            新的读者评论会触发管理员提醒；当邮件投递可用时，评论通过或拒绝也会同步通知作者。
           </p>
         </div>
         <Link href="/admin/comments/rules" className="btn-secondary self-start md:self-auto">
-          Manage comment rules
+          管理评论规则
         </Link>
       </div>
 
@@ -39,7 +39,7 @@ export default async function AdminCommentsPage() {
                     <span className="font-semibold text-[var(--ink)]">{comment.author.name}</span>
                     <span className="mx-2">/</span>
                     <span>
-                      {comment.author.email ?? (comment.author.isGuest ? "Guest email not provided" : "No email")}
+                      {comment.author.email ?? (comment.author.isGuest ? "访客未提供邮箱" : "无邮箱")}
                     </span>
                     <span className="mx-2">/</span>
                     <span>{formatDate(comment.createdAt, "yyyy-MM-dd HH:mm")}</span>
@@ -47,25 +47,25 @@ export default async function AdminCommentsPage() {
                   <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
                     {comment.author.isAdmin ? (
                       <span className="rounded-full bg-[rgba(27,107,99,0.12)] px-3 py-1 text-[var(--accent-strong)]">
-                        Admin
+                        管理员
                       </span>
                     ) : comment.author.isGuest ? (
                       <span className="rounded-full bg-black/5 px-3 py-1 text-[var(--ink-soft)]">
-                        Guest
+                        访客
                       </span>
                     ) : (
                       <span className="rounded-full bg-black/5 px-3 py-1 text-[var(--ink-soft)]">
-                        Member
+                        成员
                       </span>
                     )}
                   </div>
                   <div className="text-sm font-semibold text-[var(--accent-strong)]">
-                    Post: {comment.post.title}
+                    文章：{comment.post.title}
                   </div>
                   {comment.parent ? (
                     <div className="rounded-[1.2rem] border border-[var(--border)] bg-[var(--panel-soft)] px-4 py-3 text-sm leading-7 text-[var(--ink-soft)]">
                       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-                        Reply Context
+                        回复上下文
                       </div>
                       <p className="mt-2 text-xs font-medium text-[var(--ink-soft)]">
                         @{comment.parent.author.name}
@@ -78,7 +78,7 @@ export default async function AdminCommentsPage() {
                   {comment.moderationNotes || moderationMatches.length > 0 ? (
                     <div className="rounded-[1.2rem] border border-[rgba(168,123,53,0.22)] bg-[rgba(168,123,53,0.08)] px-4 py-3">
                       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-                        Auto Review
+                        自动审核
                       </div>
                       {comment.moderationNotes ? (
                         <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
@@ -102,28 +102,28 @@ export default async function AdminCommentsPage() {
                 </div>
 
                 <div className="flex w-full flex-col items-start gap-3 md:w-auto md:items-end">
-                  <span className="badge-soft">{comment.status}</span>
+                  <span className="badge-soft">{formatCommentStatusLabel(comment.status)}</span>
 
                   {comment.status === "PENDING" ? (
                     <div className="grid w-full gap-2 sm:grid-cols-2 md:w-auto">
                       <form
                         action={moderateCommentAction}
-                        data-confirm-message="Approve this comment? It will become visible on the site immediately."
+                        data-confirm-message="确认通过这条评论吗？通过后会立刻在站点公开显示。"
                       >
                         <input type="hidden" name="commentId" value={comment.id} />
                         <input type="hidden" name="status" value="APPROVED" />
                         <button type="submit" className="btn-secondary w-full">
-                          Approve
+                          通过
                         </button>
                       </form>
                       <form
                         action={moderateCommentAction}
-                        data-confirm-message="Reject this comment? The author will see it as rejected and it will stay hidden."
+                        data-confirm-message="确认拒绝这条评论吗？作者会看到它被拒绝，且它会继续保持隐藏。"
                       >
                         <input type="hidden" name="commentId" value={comment.id} />
                         <input type="hidden" name="status" value="REJECTED" />
                         <button type="submit" className="btn-secondary w-full text-rose-700">
-                          Reject
+                          拒绝
                         </button>
                       </form>
                     </div>
@@ -131,12 +131,12 @@ export default async function AdminCommentsPage() {
 
                   <form
                     action={deleteCommentAction}
-                    data-confirm-message="Delete this comment permanently? This also removes its discussion context from the site."
+                    data-confirm-message="确认永久删除这条评论吗？这也会从站点上移除它对应的讨论上下文。"
                     className="w-full md:w-auto"
                   >
                     <input type="hidden" name="commentId" value={comment.id} />
                     <button type="submit" className="btn-secondary w-full text-rose-700">
-                      Delete
+                      删除
                     </button>
                   </form>
                 </div>

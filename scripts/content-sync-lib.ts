@@ -201,35 +201,54 @@ async function syncBlogContent() {
     const slug = slugify(asString(frontmatter.slug) || fileName || title);
     const status = normalizePostStatus(frontmatter.status);
     const publishedAt = asDate(frontmatter.publishedAt);
+    const pinned = isTruthy(frontmatter.pinned);
+    const featured = isTruthy(frontmatter.featured);
 
-    await prisma.post.upsert({
-      where: { slug },
-      update: {
-        title,
-        excerpt: asString(frontmatter.excerpt) || buildExcerptFromContent(content, 220),
-        content,
-        category: asString(frontmatter.category) || "Notes",
-        tags: asStringArray(frontmatter.tags).slice(0, 12),
-        status,
-        featured: isTruthy(frontmatter.featured),
-        coverImageUrl: asString(frontmatter.coverImageUrl) || null,
-        publishedAt: status === PostStatus.PUBLISHED ? publishedAt ?? new Date() : null,
-        readTimeMinutes: estimateReadingTime(content),
-      },
-      create: {
-        title,
-        slug,
-        excerpt: asString(frontmatter.excerpt) || buildExcerptFromContent(content, 220),
-        content,
-        category: asString(frontmatter.category) || "Notes",
-        tags: asStringArray(frontmatter.tags).slice(0, 12),
-        status,
-        featured: isTruthy(frontmatter.featured),
-        coverImageUrl: asString(frontmatter.coverImageUrl) || null,
-        publishedAt: status === PostStatus.PUBLISHED ? publishedAt ?? new Date() : null,
-        readTimeMinutes: estimateReadingTime(content),
-        authorId: admin.id,
-      },
+    await prisma.$transaction(async (tx) => {
+      if (pinned && status === PostStatus.PUBLISHED) {
+        await tx.post.updateMany({
+          where: {
+            pinned: true,
+            status: PostStatus.PUBLISHED,
+            NOT: { slug },
+          },
+          data: {
+            pinned: false,
+          },
+        });
+      }
+
+      await tx.post.upsert({
+        where: { slug },
+        update: {
+          title,
+          excerpt: asString(frontmatter.excerpt) || buildExcerptFromContent(content, 220),
+          content,
+          category: asString(frontmatter.category) || "Notes",
+          tags: asStringArray(frontmatter.tags).slice(0, 12),
+          status,
+          pinned,
+          featured,
+          coverImageUrl: asString(frontmatter.coverImageUrl) || null,
+          publishedAt: status === PostStatus.PUBLISHED ? publishedAt ?? new Date() : null,
+          readTimeMinutes: estimateReadingTime(content),
+        },
+        create: {
+          title,
+          slug,
+          excerpt: asString(frontmatter.excerpt) || buildExcerptFromContent(content, 220),
+          content,
+          category: asString(frontmatter.category) || "Notes",
+          tags: asStringArray(frontmatter.tags).slice(0, 12),
+          status,
+          pinned,
+          featured,
+          coverImageUrl: asString(frontmatter.coverImageUrl) || null,
+          publishedAt: status === PostStatus.PUBLISHED ? publishedAt ?? new Date() : null,
+          readTimeMinutes: estimateReadingTime(content),
+          authorId: admin.id,
+        },
+      });
     });
   }
 

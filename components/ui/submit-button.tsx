@@ -21,7 +21,7 @@ export function SubmitButton({ children, className, disabled = false }: SubmitBu
       disabled={isDisabled}
     >
       {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-      <span>{pending ? "Processing..." : children}</span>
+      <span>{pending ? "处理中..." : children}</span>
     </button>
   );
 }

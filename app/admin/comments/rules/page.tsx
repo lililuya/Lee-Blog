@@ -5,6 +5,11 @@ import {
   saveCommentModerationRuleAction,
 } from "@/lib/actions/comment-rule-actions";
 import { getCommentModerationRules } from "@/lib/queries";
+import {
+  formatEnabledDisabledLabel,
+  formatModerationRuleModeLabel,
+  formatModerationRuleSeverityLabel,
+} from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -13,32 +18,32 @@ function resolveFeedback(state: string | undefined) {
     case "created":
       return {
         tone: "success" as const,
-        message: "Comment moderation rule created.",
+        message: "评论审核规则已创建。",
       };
     case "updated":
       return {
         tone: "success" as const,
-        message: "Comment moderation rule updated.",
+        message: "评论审核规则已更新。",
       };
     case "deleted":
       return {
         tone: "success" as const,
-        message: "Comment moderation rule deleted.",
+        message: "评论审核规则已删除。",
       };
     case "duplicate":
       return {
         tone: "error" as const,
-        message: "A rule with the same normalized term and mode already exists.",
+        message: "已存在相同标准化词条和模式的规则。",
       };
     case "invalid":
       return {
         tone: "error" as const,
-        message: "Please enter a valid moderation term.",
+        message: "请输入有效的审核词条。",
       };
     case "missing":
       return {
         tone: "error" as const,
-        message: "That moderation rule no longer exists.",
+        message: "该审核规则已不存在。",
       };
     default:
       return null;
@@ -58,15 +63,15 @@ function RuleForm({
     createdBy?: { name: string } | null;
   };
 }) {
-  const submitLabel = rule ? "Save rule" : "Add rule";
+  const submitLabel = rule ? "保存规则" : "添加规则";
 
   return (
     <form
       action={saveCommentModerationRuleAction}
       data-confirm-message={
         rule
-          ? "Save changes to this moderation rule? Future comments will be evaluated against the updated rule immediately."
-          : "Create this moderation rule? It will start affecting new comments immediately."
+          ? "保存这条审核规则的修改吗？之后的新评论会立刻使用更新后的规则。"
+          : "创建这条审核规则吗？它会立刻影响新的评论审核。"
       }
       className="space-y-4 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.78)] p-5"
     >
@@ -74,41 +79,41 @@ function RuleForm({
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_12rem_12rem]">
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Term</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">词条</span>
           <input
             name="term"
             defaultValue={rule?.term ?? ""}
             required
             className="field"
-            placeholder="Keyword or phrase"
+            placeholder="关键词或短语"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Mode</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">模式</span>
           <select name="mode" className="field" defaultValue={rule?.mode ?? "BLOCK"}>
-            <option value="BLOCK">Block / Match</option>
-            <option value="ALLOW">Allow / Exempt</option>
+            <option value="BLOCK">{formatModerationRuleModeLabel("BLOCK")}</option>
+            <option value="ALLOW">{formatModerationRuleModeLabel("ALLOW")}</option>
           </select>
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Severity</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">级别</span>
           <select name="severity" className="field" defaultValue={rule?.severity ?? "REVIEW"}>
-            <option value="REVIEW">Hold for review</option>
-            <option value="REJECT">Auto reject</option>
+            <option value="REVIEW">{formatModerationRuleSeverityLabel("REVIEW")}</option>
+            <option value="REJECT">{formatModerationRuleSeverityLabel("REJECT")}</option>
           </select>
         </label>
       </div>
 
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--ink)]">Notes</span>
+        <span className="text-sm font-semibold text-[var(--ink)]">备注</span>
         <textarea
           name="notes"
           defaultValue={rule?.notes ?? ""}
           rows={3}
           className="field min-h-24 resize-y"
-          placeholder="Optional context for why this rule exists."
+          placeholder="可选，记录这条规则存在的原因。"
         />
       </label>
 
@@ -120,13 +125,13 @@ function RuleForm({
             defaultChecked={rule?.enabled ?? true}
             className="h-4 w-4 accent-[var(--accent)]"
           />
-          Enabled
+          已启用
         </label>
 
         <div className="flex flex-wrap items-center gap-3">
           {rule ? (
             <span className="text-xs text-[var(--ink-soft)]">
-              Created by {rule.createdBy?.name ?? "admin"}
+              创建人：{rule.createdBy?.name ?? "管理员"}
             </span>
           ) : null}
           <button type="submit" className="btn-primary">
@@ -157,16 +162,13 @@ export default async function AdminCommentRulesPage({
           className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to comment moderation
+          返回评论审核
         </Link>
         <div>
-          <p className="section-kicker">Comment Rules</p>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight">
-            Moderation dictionary
-          </h1>
+          <p className="section-kicker">评论规则</p>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight">审核词典</h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">
-            Built-in sensitive keywords still work by default. Use this page to add custom
-            allow rules, review rules, or hard reject rules without touching code.
+            系统内置的敏感词筛查仍然会默认生效。你也可以在这里额外添加自定义放行规则、审核规则或硬拒绝规则，无需改代码。
           </p>
         </div>
       </div>
@@ -189,10 +191,9 @@ export default async function AdminCommentRulesPage({
             <ShieldAlert className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-serif text-2xl font-semibold tracking-tight">Add custom rule</h2>
+            <h2 className="font-serif text-2xl font-semibold tracking-tight">添加自定义规则</h2>
             <p className="text-sm text-[var(--ink-soft)]">
-              Allowlist rules override matching block terms. Reject severity will auto-reject a
-              comment instead of sending it to the review queue.
+              放行规则会覆盖命中的拦截词；如果级别设置为自动拒绝，评论会被直接拒绝，而不是进入审核队列。
             </p>
           </div>
         </div>
@@ -203,12 +204,10 @@ export default async function AdminCommentRulesPage({
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="section-kicker">Custom Rules</p>
-            <h2 className="font-serif text-3xl font-semibold tracking-tight">
-              Active moderation rules
-            </h2>
+            <p className="section-kicker">自定义规则</p>
+            <h2 className="font-serif text-3xl font-semibold tracking-tight">当前审核规则</h2>
           </div>
-          <span className="badge-soft">{rules.length} custom rules</span>
+          <span className="badge-soft">{rules.length} 条规则</span>
         </div>
 
         {rules.length > 0 ? (
@@ -220,17 +219,17 @@ export default async function AdminCommentRulesPage({
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                    <span className="badge-soft">{rule.mode}</span>
-                    <span className="badge-soft">{rule.severity}</span>
-                    <span className="badge-soft">{rule.enabled ? "ENABLED" : "DISABLED"}</span>
+                    <span className="badge-soft">{formatModerationRuleModeLabel(rule.mode)}</span>
+                    <span className="badge-soft">{formatModerationRuleSeverityLabel(rule.severity)}</span>
+                    <span className="badge-soft">{formatEnabledDisabledLabel(rule.enabled)}</span>
                   </div>
-                      <form
-                        action={deleteCommentModerationRuleAction}
-                        data-confirm-message={`Delete the moderation rule "${rule.term}"? This cannot be undone from the admin console.`}
-                      >
+                  <form
+                    action={deleteCommentModerationRuleAction}
+                    data-confirm-message={`删除审核规则“${rule.term}”吗？这个操作无法在后台直接撤销。`}
+                  >
                     <input type="hidden" name="ruleId" value={rule.id} />
                     <button type="submit" className="btn-secondary text-rose-700">
-                      Delete rule
+                      删除规则
                     </button>
                   </form>
                 </div>
@@ -251,7 +250,7 @@ export default async function AdminCommentRulesPage({
           </div>
         ) : (
           <div className="rounded-[1.8rem] border border-dashed border-black/10 bg-white/55 p-6 text-sm leading-7 text-[var(--ink-soft)]">
-            No custom moderation rules yet. Built-in keyword screening is still active.
+            还没有自定义审核规则。当前仍会使用系统内置的关键词筛查。
           </div>
         )}
       </section>

@@ -1,25 +1,14 @@
 import Link from "next/link";
-import { ADMIN_AUDIT_ACTIONS, formatAdminAuditAction } from "@/lib/audit";
+import {
+  ADMIN_AUDIT_ACTIONS,
+  formatAdminAuditAction,
+  formatAdminAuditMetadataKey,
+  formatAdminAuditMetadataValue,
+} from "@/lib/audit";
 import { getAdminAuditLogs } from "@/lib/queries";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-
-function formatMetadataValue(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    return "n/a";
-  }
-
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-
-  return String(value);
-}
 
 function getMetadataEntries(metadata: unknown) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
@@ -44,28 +33,28 @@ export default async function AdminAuditPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <p className="section-kicker">Audit</p>
-        <h1 className="font-serif text-4xl font-semibold tracking-tight">Admin Audit Trail</h1>
+        <p className="section-kicker">审计</p>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight">后台审计日志</h1>
         <p className="max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">
-          Review privileged admin operations across user management and moderation. The newest entries are shown first.
+          在这里查看涉及用户管理、评论审核和后台权限操作的关键记录。最新事件会优先显示在最前面。
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="outline-card rounded-[1.8rem] p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Loaded Entries</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">已加载记录</p>
           <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{logs.length}</p>
         </div>
         <div className="outline-card rounded-[1.8rem] p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Role Changes</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">角色变更</p>
           <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{roleChanges}</p>
         </div>
         <div className="outline-card rounded-[1.8rem] p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Session Revokes</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">会话撤销</p>
           <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{sessionRevocations}</p>
         </div>
         <div className="outline-card rounded-[1.8rem] p-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">Lifecycle & Moderation</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">账号与审核事件</p>
           <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">
             {accountLifecycleEvents + commentModerationEvents}
           </p>
@@ -89,11 +78,11 @@ export default async function AdminAuditPage() {
                           {log.actor.name}
                         </Link>
                       ) : (
-                        <span>System actor</span>
+                        <span>系统</span>
                       )}
                       {log.targetUser ? (
                         <>
-                          <span>to</span>
+                          <span>影响到</span>
                           <Link href={`/admin/users/${log.targetUser.id}`} className="font-semibold text-[var(--accent-strong)]">
                             {log.targetUser.name}
                           </Link>
@@ -105,16 +94,19 @@ export default async function AdminAuditPage() {
                       <div className="grid gap-2 md:grid-cols-2">
                         {metadataEntries.map(([key, value]) => (
                           <div key={key} className="rounded-[1.2rem] bg-[rgba(20,33,43,0.03)] px-3 py-2 text-xs leading-6 text-[var(--ink-soft)]">
-                            <span className="font-semibold text-[var(--ink)]">{key}:</span> {formatMetadataValue(value)}
+                            <span className="font-semibold text-[var(--ink)]">
+                              {formatAdminAuditMetadataKey(key)}:
+                            </span>{" "}
+                            {formatAdminAuditMetadataValue(key, value)}
                           </div>
                         ))}
                       </div>
                     ) : null}
                   </div>
                   <div className="rounded-[1.4rem] border border-black/8 bg-white/70 px-4 py-3 text-sm leading-7 text-[var(--ink-soft)] xl:min-w-[18rem]">
-                    <div>Actor: {log.actor ? log.actor.email : "system"}</div>
-                    <div>Target: {log.targetUser ? log.targetUser.email : "n/a"}</div>
-                    <div>Action key: {log.action}</div>
+                    <div>执行人：{log.actor ? log.actor.email : "系统"}</div>
+                    <div>目标用户：{log.targetUser ? log.targetUser.email : "无"}</div>
+                    <div>动作键：{log.action}</div>
                   </div>
                 </div>
               </article>
@@ -122,7 +114,7 @@ export default async function AdminAuditPage() {
           })
         ) : (
           <div className="rounded-[1.8rem] border border-dashed border-black/10 bg-white/60 px-5 py-6 text-sm leading-7 text-[var(--ink-soft)]">
-            No audit events have been recorded yet. Once admins start moderating users or comments, entries will appear here.
+            目前还没有任何审计事件。等管理员开始执行用户管理或评论审核操作后，这里就会出现记录。
           </div>
         )}
       </div>

@@ -26,13 +26,13 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
 
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Series title</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">专题标题</span>
           <input
             name="title"
             defaultValue={series?.title}
             required
             className="field"
-            placeholder="For example: Building a research-native AI blog"
+            placeholder="例如：把研究型 AI 博客做成长期写作专题"
           />
         </label>
 
@@ -42,12 +42,12 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
             name="slug"
             defaultValue={series?.slug}
             className="field"
-            placeholder="Leave empty to generate from the title"
+            placeholder="留空则根据标题自动生成"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Cover image URL</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">封面图 URL</span>
           <input
             name="coverImageUrl"
             defaultValue={series?.coverImageUrl ?? ""}
@@ -57,7 +57,7 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Summary</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">摘要</span>
           <textarea
             name="summary"
             defaultValue={series?.summary}
@@ -65,12 +65,12 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
             minLength={12}
             rows={3}
             className="field min-h-24 resize-y"
-            placeholder="Write a concise overview for cards, links, and the series index."
+            placeholder="写一段简短概述，用于卡片、链接预览和专题列表页。"
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Description</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">详细说明</span>
           <textarea
             name="description"
             defaultValue={series?.description}
@@ -78,7 +78,7 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
             minLength={24}
             rows={8}
             className="field min-h-40 resize-y"
-            placeholder="Describe the arc of this series, the audience, and what readers will get by following it end-to-end."
+            placeholder="介绍这个专题的主线、目标读者，以及读者从头读完后能获得什么。"
           />
         </label>
       </div>
@@ -90,7 +90,7 @@ export function SeriesForm({ action, submitLabel, confirmMessage, series }: Seri
           defaultChecked={series?.featured}
           className="h-4 w-4 accent-[var(--accent)]"
         />
-        Feature this series on the public series index
+        在公开专题页中突出显示这个专题
       </label>
 
       <SubmitButton>{submitLabel}</SubmitButton>

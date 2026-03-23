@@ -36,6 +36,7 @@ type ProfileFormProps = {
     backgroundMediaMode: string;
     backgroundOverlayOpacity: number;
     assistantAvatarUrl: string | null;
+    chatEnabledForReaders: boolean;
     researchAreas: string[];
     educationMarkdown: string;
     experienceMarkdown: string;
@@ -60,7 +61,7 @@ function ProgressBanner({
   if (phase === "error") {
     return (
       <div className="rounded-[1.4rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-        {errorMessage ?? "The upload could not be completed. Please try again."}
+        {errorMessage ?? "上传未能完成，请稍后再试。"}
       </div>
     );
   }
@@ -68,10 +69,10 @@ function ProgressBanner({
   const uploadProgress = Math.max(0, Math.min(100, Math.round(progress)));
   const statusText =
     phase === "uploading"
-      ? `Uploading media: ${uploadProgress}%`
+      ? `正在上传媒体：${uploadProgress}%`
       : phase === "processing"
-        ? "Upload finished. The server is transcoding and saving the background video..."
-        : "Save completed. Redirecting back to the profile page...";
+        ? "上传完成，服务器正在转码并保存背景视频..."
+        : "保存完成，正在返回资料页面...";
 
   return (
     <div className="rounded-[1.4rem] border border-[rgba(27,107,99,0.16)] bg-[rgba(27,107,99,0.08)] px-4 py-4 text-sm text-[var(--accent-strong)]">
@@ -88,7 +89,7 @@ function ProgressBanner({
         />
       </div>
       <p className="mt-2 text-xs leading-6 text-[var(--ink-soft)]">
-        Large videos take the longest during server-side compression, especially on the first save.
+        大视频在服务端压缩阶段会耗时更久，尤其是第一次保存时。
       </p>
     </div>
   );
@@ -195,10 +196,10 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
       setUploadProgress(0);
       setErrorMessage(
         response.error === "network"
-          ? "The network connection was interrupted during upload."
+          ? "上传过程中网络连接中断。"
           : response.parseError
-            ? "The server returned an unexpected response. Please try again."
-            : "The background could not be saved. Please review the form and try again.",
+            ? "服务器返回了无法识别的响应，请重试。"
+            : "背景媒体暂时无法保存，请检查表单后再试。",
       );
       return;
     }
@@ -217,22 +218,22 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
 
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Full name</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">姓名</span>
           <input name="fullName" defaultValue={profile.fullName} required className="field" />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Headline</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">主标题</span>
           <input name="headline" defaultValue={profile.headline} required className="field" />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Tagline</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">副标题</span>
           <input name="tagline" defaultValue={profile.tagline} required className="field" />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Short bio</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">简短介绍</span>
           <textarea
             name="shortBio"
             defaultValue={profile.shortBio}
@@ -243,7 +244,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Long bio</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">详细介绍</span>
           <textarea
             name="longBio"
             defaultValue={profile.longBio}
@@ -251,22 +252,22 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
             className="field min-h-40 resize-y"
           />
           <p className="text-xs leading-6 text-[var(--ink-soft)]">
-            Optional. You can keep this short for now and expand it later.
+            这是可选项。现在先写短一点也可以，后面再慢慢扩展。
           </p>
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Institution</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">机构</span>
           <input name="institution" defaultValue={profile.institution ?? ""} className="field" />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Department</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">部门</span>
           <input name="department" defaultValue={profile.department ?? ""} className="field" />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Location</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">所在地</span>
           <input name="location" defaultValue={profile.location ?? ""} className="field" />
         </label>
 
@@ -276,7 +277,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Website</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">网站</span>
           <input name="websiteUrl" defaultValue={profile.websiteUrl ?? ""} className="field" />
         </label>
 
@@ -296,12 +297,12 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">CV URL</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">简历 URL</span>
           <input name="cvUrl" defaultValue={profile.cvUrl ?? ""} className="field" />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Hero image path or URL</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">主页主图路径或 URL</span>
           <input
             name="heroImageUrl"
             defaultValue={profile.heroImageUrl ?? ""}
@@ -312,16 +313,16 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
 
         <section className="space-y-4 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.56)] p-5 md:col-span-2">
           <div className="space-y-2">
-            <span className="text-sm font-semibold text-[var(--ink)]">Active background mode</span>
+            <span className="text-sm font-semibold text-[var(--ink)]">当前启用的背景模式</span>
             <input type="hidden" name="backgroundMediaMode" value={selectedMode} />
             <div className="grid gap-3 sm:grid-cols-2">
               {(["IMAGE", "VIDEO"] as const).map((mode) => {
                 const isActive = selectedMode === mode;
-                const title = mode === "IMAGE" ? "Image mode" : "Video mode";
+                const title = mode === "IMAGE" ? "图片模式" : "视频模式";
                 const description =
                   mode === "IMAGE"
-                    ? "Only the background image will render on the live site."
-                    : "Only the background video will render on the live site.";
+                    ? "公开站点只会渲染背景图片。"
+                    : "公开站点只会渲染背景视频。";
 
                 return (
                   <button
@@ -343,7 +344,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                             : "bg-[rgba(20,33,43,0.08)] text-[var(--ink-soft)]"
                         }`}
                       >
-                        {isActive ? "ACTIVE" : "STANDBY"}
+                        {isActive ? "启用中" : "待命"}
                       </span>
                     </div>
                     <p className="mt-2 text-xs leading-6 text-[var(--ink-soft)]">{description}</p>
@@ -352,24 +353,24 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
               })}
             </div>
             <p className="text-xs leading-6 text-[var(--ink-soft)]">
-              Background image and video can both be stored, but only the active mode will render on
-              the live homepage.
+              背景图片和背景视频都可以同时保存，但公开首页只会渲染当前启用的那一种。
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold text-[var(--ink)]">
-                Background image path or URL
+                背景图片路径或 URL
               </span>
               <input
                 name="backgroundImageUrl"
                 defaultValue={profile.backgroundImageUrl ?? ""}
                 className="field"
-                placeholder="/uploads/site/background.png or https://example.com/background.jpg"
+                placeholder="https://cdn.example.com/background.jpg or /uploads/site/background.png"
               />
               <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                Supported image uploads can be up to {uploadLimits.imageMaxUploadLabel}.
+                支持的图片上传大小上限为 {uploadLimits.imageMaxUploadLabel}。已保存图片既可以来自本地路径，
+                也可以来自你配置的对象存储域名。
               </p>
               {safeBackgroundPreview ? (
                 <div className="overflow-hidden rounded-[1.4rem] border border-black/8 bg-[rgba(255,255,255,0.76)] shadow-[0_18px_38px_rgba(20,33,43,0.05)]">
@@ -378,8 +379,8 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                     style={{ backgroundImage: `url("${safeBackgroundPreview}")` }}
                   />
                   <div className="border-t border-black/6 px-4 py-3 text-xs leading-6 text-[var(--ink-soft)]">
-                    Current stored background image: {profile.backgroundImageUrl}
-                    {selectedMode === "IMAGE" ? " (active)" : " (inactive)"}
+                    当前已保存的背景图片：{profile.backgroundImageUrl}
+                    {selectedMode === "IMAGE" ? "（启用中）" : "（未启用）"}
                   </div>
                 </div>
               ) : null}
@@ -387,7 +388,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
 
             <label className="space-y-2">
               <span className="text-sm font-semibold text-[var(--ink)]">
-                Background overlay strength (0-100)
+                背景遮罩强度（0-100）
               </span>
               <input
                 name="backgroundOverlayOpacity"
@@ -399,13 +400,13 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                 className="field max-w-[12rem]"
               />
               <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                Lower values keep more of the active media visible.
+                数值越低，背景媒体本身会保留得越明显。
               </p>
             </label>
 
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold text-[var(--ink)]">
-                Upload a new background image
+                上传新的背景图片
               </span>
               <input
                 name="backgroundImageFile"
@@ -419,26 +420,26 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                   type="checkbox"
                   className="h-4 w-4 accent-[var(--accent)]"
                 />
-                Clear the stored background image
+                清除当前已保存的背景图片
               </span>
             </label>
 
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold text-[var(--ink)]">
-                Background video path or URL
+                背景视频路径或 URL
               </span>
               <input
                 name="backgroundVideoUrl"
                 defaultValue={profile.backgroundVideoUrl ?? ""}
                 className="field"
-                placeholder="/uploads/site/background.mp4 or https://example.com/background.webm"
+                placeholder="https://cdn.example.com/background.mp4 or /uploads/site/background.mp4"
               />
               <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                Uploaded videos are automatically converted to MP4 and normalized to about{" "}
+                上传后的视频会自动转换为 MP4，并压缩到大约{" "}
                 {uploadLimits.videoTargetBitrateLabel}.
               </p>
               <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                Supported video uploads can be up to {uploadLimits.videoMaxUploadLabel}.
+                支持的视频上传大小上限为 {uploadLimits.videoMaxUploadLabel}。
               </p>
               {safeBackgroundVideoPreview ? (
                 <div className="overflow-hidden rounded-[1.4rem] border border-black/8 bg-[rgba(255,255,255,0.76)] shadow-[0_18px_38px_rgba(20,33,43,0.05)]">
@@ -452,8 +453,8 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                     preload="metadata"
                   />
                   <div className="border-t border-black/6 px-4 py-3 text-xs leading-6 text-[var(--ink-soft)]">
-                    Current stored background video: {profile.backgroundVideoUrl}
-                    {selectedMode === "VIDEO" ? " (active)" : " (inactive)"}
+                    当前已保存的背景视频：{profile.backgroundVideoUrl}
+                    {selectedMode === "VIDEO" ? "（启用中）" : "（未启用）"}
                   </div>
                 </div>
               ) : null}
@@ -461,7 +462,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
 
             <label className="space-y-2 md:col-span-2">
               <span className="text-sm font-semibold text-[var(--ink)]">
-                Upload a background video (MP4/WEBM)
+                上传背景视频（MP4/WEBM）
               </span>
               <input
                 name="backgroundVideoFile"
@@ -475,7 +476,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                   type="checkbox"
                   className="h-4 w-4 accent-[var(--accent)]"
                 />
-                Clear the stored background video
+                清除当前已保存的背景视频
               </span>
             </label>
           </div>
@@ -483,7 +484,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
 
         <label className="space-y-2 md:col-span-2">
           <span className="text-sm font-semibold text-[var(--ink)]">
-            Assistant avatar path or URL
+            助手头像路径或 URL
           </span>
           <input
             name="assistantAvatarUrl"
@@ -492,7 +493,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
             placeholder="/uploads/assistant.png or https://example.com/assistant.png"
           />
           <p className="text-xs leading-6 text-[var(--ink-soft)]">
-            This avatar is reused in the site chat entry and other assistant-facing UI.
+            这个头像会复用在站点聊天入口和其他助手相关界面中。
           </p>
           {safeAssistantAvatarPreview ? (
             <div className="flex items-center gap-4 rounded-[1.4rem] border border-black/8 bg-[rgba(255,255,255,0.76)] px-4 py-4 shadow-[0_18px_38px_rgba(20,33,43,0.05)]">
@@ -501,16 +502,42 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
                 style={{ backgroundImage: `url("${safeAssistantAvatarPreview}")` }}
               />
               <div className="min-w-0 text-xs leading-6 text-[var(--ink-soft)]">
-                <div className="font-semibold text-[var(--ink)]">Current assistant avatar</div>
+                <div className="font-semibold text-[var(--ink)]">当前助手头像</div>
                 <div className="truncate">{profile.assistantAvatarUrl}</div>
               </div>
             </div>
           ) : null}
         </label>
 
+        <section className="space-y-3 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.56)] p-5 md:col-span-2">
+          <div className="space-y-1.5">
+            <div className="text-sm font-semibold text-[var(--ink)]">站内助手权限</div>
+            <p className="text-xs leading-6 text-[var(--ink-soft)]">
+              开启后，已登录的普通用户也可以使用站内对话和语音转写。关闭时只有管理员可用。
+            </p>
+          </div>
+
+          <label className="flex items-start gap-3 rounded-[1.2rem] border border-[rgba(27,107,99,0.16)] bg-[rgba(27,107,99,0.08)] px-4 py-4 text-sm text-[var(--ink)]">
+            <input
+              name="chatEnabledForReaders"
+              type="checkbox"
+              defaultChecked={profile.chatEnabledForReaders}
+              className="mt-1 h-4 w-4 shrink-0 accent-[var(--accent)]"
+            />
+            <span className="space-y-1">
+              <span className="block font-semibold text-[var(--ink)]">
+                向已登录用户开放站内助手
+              </span>
+              <span className="block text-xs leading-6 text-[var(--ink-soft)]">
+                游客仍然需要先登录；管理员始终保留访问权限。
+              </span>
+            </span>
+          </label>
+        </section>
+
         <label className="space-y-2 md:col-span-2">
           <span className="text-sm font-semibold text-[var(--ink)]">
-            Research areas (comma separated)
+            研究方向（用逗号分隔）
           </span>
           <input
             name="researchAreas"
@@ -520,7 +547,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Education (Markdown)</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">教育经历（Markdown）</span>
           <textarea
             name="educationMarkdown"
             defaultValue={profile.educationMarkdown}
@@ -530,7 +557,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Experience (Markdown)</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">经历（Markdown）</span>
           <textarea
             name="experienceMarkdown"
             defaultValue={profile.experienceMarkdown}
@@ -540,7 +567,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Awards (Markdown)</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">荣誉奖项（Markdown）</span>
           <textarea
             name="awardsMarkdown"
             defaultValue={profile.awardsMarkdown}
@@ -550,7 +577,7 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Speaking (Markdown)</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">演讲与分享（Markdown）</span>
           <textarea
             name="speakingMarkdown"
             defaultValue={profile.speakingMarkdown}
@@ -570,12 +597,12 @@ export function ProfileForm({ action, confirmMessage, uploadLimits, profile }: P
         ) : null}
         <span>
           {submitPhase === "uploading"
-            ? "Uploading..."
+            ? "上传中..."
             : submitPhase === "processing"
-              ? "Transcoding video..."
+              ? "视频转码中..."
               : submitPhase === "redirecting"
-                ? "Finishing..."
-                : "Save homepage profile"}
+                ? "收尾中..."
+                : "保存首页资料"}
         </span>
       </button>
     </form>

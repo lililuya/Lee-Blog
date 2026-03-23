@@ -1,11 +1,10 @@
-import { unlink } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
+import { deleteMediaAsset, type StoredMediaAsset } from "@/lib/media-storage";
 import {
   hasSiteProfileBackgroundMediaModeSupport,
   prisma,
 } from "@/lib/prisma";
 import {
-  deleteLocalSiteAsset,
   SiteAssetUploadError,
   storeSiteImageUpload,
   storeSiteVideoUpload,
@@ -26,12 +25,12 @@ function getBoolean(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
-async function cleanupUploadedSiteAsset(diskPath: string | null | undefined) {
-  if (!diskPath) {
+async function cleanupUploadedSiteAsset(asset: StoredMediaAsset | null | undefined) {
+  if (!asset) {
     return;
   }
 
-  await unlink(diskPath).catch(() => null);
+  await deleteMediaAsset(asset);
 }
 
 export function buildAdminProfileRedirectPath(code?: string) {
@@ -130,6 +129,7 @@ export async function saveAdminProfileFromFormData(formData: FormData) {
       getString(formData, "backgroundOverlayOpacity") ||
       String(existingProfile?.backgroundOverlayOpacity ?? 22),
     assistantAvatarUrl: getOptionalString(formData, "assistantAvatarUrl"),
+    chatEnabledForReaders: getBoolean(formData, "chatEnabledForReaders"),
     researchAreas: parseCsv(getString(formData, "researchAreas")),
     educationMarkdown: getString(formData, "educationMarkdown"),
     experienceMarkdown: getString(formData, "experienceMarkdown"),
@@ -162,8 +162,8 @@ export async function saveAdminProfileFromFormData(formData: FormData) {
     }
   } catch (error) {
     await Promise.all([
-      cleanupUploadedSiteAsset(uploadedBackgroundImage?.diskPath),
-      cleanupUploadedSiteAsset(uploadedBackgroundVideo?.diskPath),
+      cleanupUploadedSiteAsset(uploadedBackgroundImage),
+      cleanupUploadedSiteAsset(uploadedBackgroundVideo),
     ]);
 
     if (error instanceof SiteAssetUploadError) {
@@ -224,8 +224,8 @@ export async function saveAdminProfileFromFormData(formData: FormData) {
     }
   } catch (error) {
     await Promise.all([
-      cleanupUploadedSiteAsset(uploadedBackgroundImage?.diskPath),
-      cleanupUploadedSiteAsset(uploadedBackgroundVideo?.diskPath),
+      cleanupUploadedSiteAsset(uploadedBackgroundImage),
+      cleanupUploadedSiteAsset(uploadedBackgroundVideo),
     ]);
     console.error("[saveAdminProfileFromFormData:save]", error);
     return {
@@ -236,11 +236,11 @@ export async function saveAdminProfileFromFormData(formData: FormData) {
   }
 
   if (existingProfile?.backgroundImageUrl !== nextBackgroundImageUrl) {
-    await deleteLocalSiteAsset(existingProfile?.backgroundImageUrl);
+    await deleteMediaAsset(existingProfile?.backgroundImageUrl);
   }
 
   if (existingProfile?.backgroundVideoUrl !== nextBackgroundVideoUrl) {
-    await deleteLocalSiteAsset(existingProfile?.backgroundVideoUrl);
+    await deleteMediaAsset(existingProfile?.backgroundVideoUrl);
   }
 
   revalidatePath("/");

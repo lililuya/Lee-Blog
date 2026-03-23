@@ -1,77 +1,126 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Layers3, Star } from "lucide-react";
+import { ArrowUpRight, Layers3, Star } from "lucide-react";
+import { JsonLd } from "@/components/site/json-ld";
 import { SectionHeading } from "@/components/site/section-heading";
+import {
+  buildCollectionPageJsonLd,
+  buildContentMetadata,
+  buildItemListJsonLd,
+} from "@/lib/content-seo";
 import { getPublicContentSeries } from "@/lib/queries";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = buildContentMetadata({
+  title: "专题阅读",
+  description:
+    "把相关文章、笔记和每周周报按阅读顺序串起来，而不是让它们散落成独立页面。",
+  path: "/series",
+  keywords: ["专题", "阅读路径", "内容专题", "顺序阅读"],
+  section: "专题",
+  type: "website",
+  ogEyebrow: "专题",
+});
+
 export default async function SeriesIndexPage() {
   const seriesList = await getPublicContentSeries();
+  const collectionJsonLd = buildCollectionPageJsonLd({
+    name: "Lee 博客专题",
+    description:
+      "把文章、笔记和每周周报串联起来的公开专题集合。",
+    path: "/series",
+    itemCount: seriesList.length,
+    keywords: ["专题", "阅读路径", "内容专题", "顺序阅读"],
+  });
+  const itemListJsonLd = buildItemListJsonLd({
+    name: "专题列表",
+    path: "/series",
+    items: seriesList.map((series) => ({
+      name: series.title,
+      path: `/series/${series.slug}`,
+    })),
+  });
 
   return (
     <div className="container-shell py-16">
-      <div className="space-y-10">
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd data={itemListJsonLd} />
+
+      <div className="editorial-shell space-y-10">
         <SectionHeading
-          kicker="Series"
-          title="Curated reading series"
-          description="Follow connected posts, notes, and weekly digests as guided tracks instead of isolated pages."
+          kicker="专题"
+          title="专题阅读"
+          description="按照明确阅读顺序，把文章、笔记和周报串成一条连续的阅读路径，而不是逐篇零散发现。"
           href="/archive"
-          linkLabel="Browse archive"
+          linkLabel="查看归档"
         />
 
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--ink-soft)]">
+          <p>当前共有 {seriesList.length} 个公开专题可供阅读。</p>
+          <Link
+            href="/blog"
+            className="inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)]"
+          >
+            打开文章归档
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+
         {seriesList.length > 0 ? (
-          <div className="grid gap-5 xl:grid-cols-2">
+          <div className="editorial-list">
             {seriesList.map((series) => (
               <Link
                 key={series.id}
                 href={`/series/${series.slug}`}
-                className="glass-card rounded-[2rem] p-6 transition hover:-translate-y-1 hover:border-[var(--accent)]"
+                className="editorial-list-item block"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)]">
+                <div className="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)_10rem] md:items-start">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+                    <div className="inline-flex items-center gap-2 text-[var(--accent-strong)]">
                       <Layers3 className="h-4 w-4" />
-                      Series
+                      专题
                     </div>
-                    <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight">{series.title}</h2>
+                    <div className="mt-2">
+                      最近更新：
+                      {series.latestPublishedAt
+                        ? formatDate(series.latestPublishedAt, "yyyy-MM-dd")
+                        : "暂无"}
+                    </div>
                   </div>
-                  {series.featured ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(168,123,53,0.12)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
-                      <Star className="h-3.5 w-3.5" />
-                      Featured
-                    </span>
-                  ) : null}
-                </div>
-
-                <p className="mt-4 text-sm leading-8 text-[var(--ink-soft)]">{series.summary}</p>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-4">
-                  <div className="rounded-[1.2rem] border border-black/8 bg-white/62 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">Items</p>
-                    <p className="mt-2 text-lg font-semibold text-[var(--ink)]">{series.totalCount}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-black/8 bg-white/62 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">Posts</p>
-                    <p className="mt-2 text-lg font-semibold text-[var(--ink)]">{series.postCount}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-black/8 bg-white/62 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">Notes</p>
-                    <p className="mt-2 text-lg font-semibold text-[var(--ink)]">{series.noteCount}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-black/8 bg-white/62 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">Latest</p>
-                    <p className="mt-2 text-lg font-semibold text-[var(--ink)]">
-                      {series.latestPublishedAt ? formatDate(series.latestPublishedAt, "yyyy-MM-dd") : "N/A"}
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="font-serif text-3xl font-semibold tracking-tight text-[var(--ink)]">
+                        {series.title}
+                      </h2>
+                      {series.featured ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(168,123,53,0.12)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">
+                          <Star className="h-3.5 w-3.5" />
+                          推荐
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="max-w-3xl text-base leading-8 text-[var(--ink-soft)]">
+                      {series.summary}
                     </p>
+                    <div className="flex flex-wrap gap-4 text-sm text-[var(--ink-soft)]">
+                      <span>{series.totalCount} 条内容</span>
+                      <span>{series.postCount} 篇文章</span>
+                      <span>{series.noteCount} 条笔记</span>
+                      <span>{series.digestCount} 份周报</span>
+                    </div>
+                  </div>
+                  <div className="text-left text-sm font-semibold text-[var(--ink-soft)] md:text-right">
+                    进入专题
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="glass-card rounded-[2rem] p-8 text-sm leading-8 text-[var(--ink-soft)]">
-            No public series are available yet. Once you connect posts, notes, or digests into a curated track, they will appear here.
+          <div className="editorial-panel p-8 text-sm leading-8 text-[var(--ink-soft)]">
+            暂时还没有公开专题。等文章、笔记或周报被串成一条阅读路径后，这里就会显示出来。
           </div>
         )}
       </div>

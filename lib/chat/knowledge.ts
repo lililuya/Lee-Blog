@@ -12,6 +12,7 @@ type KnowledgeSource = {
   title: string;
   href: string;
   kindLabel: string;
+  updatedAt: Date;
   content: string;
 };
 
@@ -113,6 +114,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           content: true,
           category: true,
           tags: true,
+          updatedAt: true,
         },
       }),
       client.note.findMany({
@@ -125,6 +127,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           content: true,
           noteType: true,
           tags: true,
+          updatedAt: true,
         },
       }),
       client.journalEntry.findMany({
@@ -132,9 +135,11 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
         select: {
           id: true,
           title: true,
+          slug: true,
           summary: true,
           content: true,
           mood: true,
+          updatedAt: true,
         },
       }),
       client.dailyPaperEntry.findMany({
@@ -144,6 +149,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           summary: true,
           primaryCategory: true,
           authors: true,
+          updatedAt: true,
           topic: {
             select: {
               name: true,
@@ -160,6 +166,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           content: true,
           highlights: true,
           featuredTopics: true,
+          updatedAt: true,
         },
       }),
       client.paperLibraryItem.findMany({
@@ -171,6 +178,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           topicName: true,
           primaryCategory: true,
           authors: true,
+          updatedAt: true,
         },
       }),
       client.paperAnnotation.findMany({
@@ -179,6 +187,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
           userId: true,
           content: true,
           quote: true,
+          updatedAt: true,
           libraryItem: {
             select: {
               title: true,
@@ -197,6 +206,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: post.title,
       href: `/blog/${post.slug}`,
       kindLabel: "Blog post",
+      updatedAt: post.updatedAt,
       content: `${post.title}\n\n${post.excerpt}\n\n${post.content}\n\n${post.category}\n\n${post.tags.join(", ")}`,
     })),
     ...notes.map((note) => ({
@@ -207,6 +217,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: note.title,
       href: `/notes/${note.slug}`,
       kindLabel: "Evergreen note",
+      updatedAt: note.updatedAt,
       content: `${note.title}\n\n${note.summary}\n\n${note.content}\n\n${note.noteType ?? ""}\n\n${note.tags.join(", ")}`,
     })),
     ...journalEntries.map((entry) => ({
@@ -215,8 +226,9 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       sourceId: entry.id,
       visibility: RagChunkVisibility.PUBLIC,
       title: entry.title,
-      href: "/journal",
+      href: `/journal/${entry.slug}`,
       kindLabel: "Journal entry",
+      updatedAt: entry.updatedAt,
       content: `${entry.title}\n\n${entry.summary}\n\n${entry.content}\n\n${entry.mood ?? ""}`,
     })),
     ...dailyPapers.map((entry) => ({
@@ -227,6 +239,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: entry.title,
       href: "/papers",
       kindLabel: "Daily paper",
+      updatedAt: entry.updatedAt,
       content: `${entry.title}\n\n${entry.summary}\n\n${entry.topic.name}\n\n${entry.primaryCategory ?? ""}\n\n${entry.authors.join(", ")}`,
     })),
     ...digests.map((digest) => ({
@@ -237,6 +250,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: digest.title,
       href: `/digest/${digest.slug}`,
       kindLabel: "Weekly digest",
+      updatedAt: digest.updatedAt,
       content: `${digest.title}\n\n${digest.summary}\n\n${digest.content}\n\n${digest.highlights.join("\n")}\n\n${digest.featuredTopics.join(", ")}`,
     })),
     ...libraryItems.map((item) => ({
@@ -248,6 +262,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: item.title,
       href: "/papers/library",
       kindLabel: "My paper library",
+      updatedAt: item.updatedAt,
       content: `${item.title}\n\n${item.summary}\n\n${item.topicName ?? ""}\n\n${item.primaryCategory ?? ""}\n\n${item.authors.join(", ")}`,
     })),
     ...annotations.map((annotation) => ({
@@ -259,6 +274,7 @@ export async function collectKnowledgeSources(client: PrismaClient = prisma) {
       title: annotation.libraryItem.title,
       href: "/papers/library",
       kindLabel: "My annotation",
+      updatedAt: annotation.updatedAt,
       content: `${annotation.libraryItem.title}\n\n${annotation.quote ?? ""}\n\n${annotation.content}`,
     })),
   ];

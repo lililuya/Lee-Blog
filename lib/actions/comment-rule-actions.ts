@@ -78,7 +78,7 @@ export async function saveCommentModerationRuleAction(formData: FormData) {
     await prisma.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_RULE_SAVED,
-        summary: `${parsed.ruleId ? "Updated" : "Created"} comment moderation rule "${rule.term}".`,
+        summary: `${parsed.ruleId ? "已更新" : "已创建"}评论审核规则“${rule.term}”。`,
         actorId: admin.id,
         metadata: {
           ruleId: rule.id,
@@ -131,7 +131,7 @@ export async function deleteCommentModerationRuleAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_RULE_DELETED,
-        summary: `Deleted comment moderation rule "${existingRule.term}".`,
+        summary: `已删除评论审核规则“${existingRule.term}”。`,
         actorId: admin.id,
         metadata: {
           ruleId: existingRule.id,

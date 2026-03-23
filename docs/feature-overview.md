@@ -110,6 +110,7 @@ The project now behaves like four tightly connected layers in one repository:
 ### Content administration
 
 - posts CRUD
+- post category normalization and merge tools
 - notes CRUD
 - journal CRUD
 - gallery CRUD

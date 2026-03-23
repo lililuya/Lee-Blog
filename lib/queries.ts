@@ -1,12 +1,21 @@
 import {
   CommentStatus,
+  PaperReadingStatus,
   PostStatus,
   UserRole,
   UserStatus,
 } from "@prisma/client";
 import {
+  extractMarkdownCitationCards,
+  getCanonicalArxivId,
+  getCanonicalPaperReferenceKey,
+  getCanonicalPaperUrl,
+  getPaperCitationLookupKeys,
+} from "@/lib/citation-cards";
+import {
   hasCommentGuestIdentitySupport,
   hasCommentReplySupport,
+  hasGalleryAlbumSupport,
   hasSiteProfileBackgroundMediaModeSupport,
   prisma,
 } from "@/lib/prisma";
@@ -32,6 +41,8 @@ import {
   demoWeeklyDigests,
 } from "@/lib/demo-data";
 import { resolveCommentAuthorIdentity } from "@/lib/comment-identity";
+import { DEFAULT_CONTENT_LANGUAGE } from "@/lib/content-language";
+import { getUserPaperLibrary } from "@/lib/paper-library-queries";
 import { getDigestDate } from "@/lib/papers";
 import { recordSearchQuery } from "@/lib/site-analytics";
 import { buildFooterAnalytics, getDemoFooterAnalytics } from "@/lib/visitor-analytics";
@@ -63,6 +74,23 @@ type CategoryArchiveItem = {
   category: string;
   count: number;
   latestPublishedAt: Date | null;
+};
+
+type AdminPostCategoryItem = {
+  category: string;
+  normalizedCategory: string;
+  totalPosts: number;
+  publishedPosts: number;
+  subscriberCount: number;
+  latestPublishedAt: Date | null;
+  latestUpdatedAt: Date | null;
+  recentPosts: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    status: PostStatus;
+    publishedAt: Date | null;
+  }>;
 };
 
 type RecentComment = {
@@ -120,8 +148,31 @@ type ArchiveMonthGroup = {
   entries: ArchiveEntry[];
 };
 
-const archiveMonthFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
+type SubscriptionPreferenceCount = {
+  label: string;
+  count: number;
+};
+
+type SubscriptionRecentSubscriber = {
+  id: string;
+  email: string;
+  name: string | null;
+  status: "active" | "pending" | "expired" | "unsubscribed";
+  postNotificationsEnabled: boolean;
+  digestNotificationsEnabled: boolean;
+  categories: string[];
+  tags: string[];
+  createdAt: Date;
+  confirmedAt: Date | null;
+  unsubscribedAt: Date | null;
+  notificationCount: number;
+  lastNotifiedAt: Date | null;
+  digestNotificationCount: number;
+  lastDigestNotifiedAt: Date | null;
+};
+
+const archiveMonthFormatter = new Intl.DateTimeFormat("zh-CN", {
+  month: "long",
   year: "numeric",
   timeZone: "UTC",
 });
@@ -162,6 +213,140 @@ type NoteBacklink = {
   publishedAt: Date;
 };
 
+type PostLanguageAlternate = {
+  id: string;
+  title: string;
+  slug: string;
+  language: string;
+  publishedAt: Date | null;
+  isPrimary: boolean;
+};
+
+type ReferencedNoteSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  noteType: string | null;
+  publishedAt: Date | null;
+};
+
+type ReferencedPaperSummary = {
+  key: string;
+  title: string;
+  authors: string[];
+  url: string | null;
+  arxivId: string | null;
+  year: string | null;
+  note: string | null;
+};
+
+type PublicPaperFlowReference = {
+  id: string;
+  kindLabel: string;
+  href: string;
+  title: string;
+  summary: string;
+  publishedAt: Date;
+  matchedCards: number;
+};
+
+type PublicResearchReadingItem = {
+  id: string;
+  arxivId: string;
+  title: string;
+  summary: string;
+  authors: string[];
+  paperUrl: string;
+  pdfUrl: string | null;
+  primaryCategory: string | null;
+  topicName: string | null;
+  status: PaperReadingStatus | string;
+  progressPercent: number;
+  createdAt: Date;
+  updatedAt: Date;
+  lastReadAt: Date | null;
+  completedAt: Date | null;
+  annotationCount: number;
+  latestQuote: string | null;
+  latestNote: string | null;
+  latestHighlightAt: Date | null;
+  usageCount: number;
+  usageReferences: PublicPaperFlowReference[];
+};
+
+type PublicResearchReadingHighlight = {
+  id: string;
+  arxivId: string;
+  title: string;
+  authors: string[];
+  paperUrl: string;
+  quote: string;
+  note: string | null;
+  createdAt: Date;
+  usageCount: number;
+};
+
+type PublicResearchReadingData = {
+  owner: {
+    name: string;
+    avatarUrl: string | null;
+  };
+  counts: {
+    saved: number;
+    queued: number;
+    reading: number;
+    completed: number;
+    archived: number;
+    annotations: number;
+    highlights: number;
+    promotedPapers: number;
+    promotedEntries: number;
+  };
+  continueReading: PublicResearchReadingItem[];
+  queuedPapers: PublicResearchReadingItem[];
+  completedPapers: PublicResearchReadingItem[];
+  promotedPapers: PublicResearchReadingItem[];
+  recentHighlights: PublicResearchReadingHighlight[];
+};
+
+type PaperFlowSourceAnnotation = {
+  id: string;
+  content: string;
+  quote: string | null;
+  createdAt: Date;
+};
+
+type PaperFlowSourceItem = {
+  id: string;
+  arxivId: string;
+  title: string;
+  summary: string;
+  authors: string[];
+  paperUrl: string;
+  pdfUrl: string | null;
+  primaryCategory: string | null;
+  topicName: string | null;
+  status: PaperReadingStatus | string;
+  progressPercent: number;
+  createdAt: Date;
+  updatedAt: Date;
+  lastReadAt: Date | null;
+  completedAt: Date | null;
+  annotationCount: number;
+  annotations: PaperFlowSourceAnnotation[];
+};
+
+type PaperFlowContentCandidate = {
+  id: string;
+  kindLabel: string;
+  href: string;
+  title: string;
+  summary: string;
+  content: string;
+  publishedAt: Date;
+};
+
 function buildPopularTags(tagGroups: string[][], limit: number) {
   const counts = new Map<string, number>();
 
@@ -189,21 +374,135 @@ function buildPopularTags(tagGroups: string[][], limit: number) {
     .slice(0, limit);
 }
 
+function decodeTaxonomyValue(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(trimmed.replace(/\+/g, "%20"));
+  } catch {
+    return trimmed;
+  }
+}
+
 function normalizeTaxonomyValue(value: string) {
-  return value.trim().toLowerCase();
+  return decodeTaxonomyValue(value).trim().toLowerCase();
+}
+
+function buildSubscriptionPreferenceCounts(
+  subscribers: Array<{ categories: string[]; tags: string[] }>,
+  field: "categories" | "tags",
+  limit = 8,
+) {
+  const counts = new Map<string, SubscriptionPreferenceCount>();
+
+  for (const subscriber of subscribers) {
+    const seen = new Set<string>();
+
+    for (const rawValue of subscriber[field]) {
+      const value = rawValue.trim();
+      const normalized = normalizeTaxonomyValue(value);
+
+      if (!value || seen.has(normalized)) {
+        continue;
+      }
+
+      seen.add(normalized);
+      const current = counts.get(normalized) ?? {
+        label: value,
+        count: 0,
+      };
+      current.label = current.label.length >= value.length ? current.label : value;
+      current.count += 1;
+      counts.set(normalized, current);
+    }
+  }
+
+  return [...counts.values()]
+    .sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+
+      return left.label.localeCompare(right.label, "zh-CN");
+    })
+    .slice(0, limit);
+}
+
+function resolveSubscriptionStatus(subscriber: {
+  isActive: boolean;
+  confirmedAt: Date | null;
+  unsubscribedAt: Date | null;
+  confirmationToken: string | null;
+  confirmationExpiresAt: Date | null;
+}) {
+  if (subscriber.isActive && subscriber.confirmedAt && !subscriber.unsubscribedAt) {
+    return "active" as const;
+  }
+
+  if (subscriber.unsubscribedAt) {
+    return "unsubscribed" as const;
+  }
+
+  if (
+    subscriber.confirmationToken &&
+    subscriber.confirmationExpiresAt &&
+    subscriber.confirmationExpiresAt.getTime() < Date.now()
+  ) {
+    return "expired" as const;
+  }
+
+  return "pending" as const;
+}
+
+function normalizeNoteSlugCandidate(value: string | null | undefined) {
+  const rawValue = (value ?? "").trim();
+
+  if (!rawValue) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(rawValue).trim().toLowerCase();
+  } catch {
+    return rawValue.toLowerCase();
+  }
+}
+
+function extractNoteReferenceSlugsFromValue(value: string | null | undefined) {
+  const text = value ?? "";
+  const matches = text.matchAll(/(?:https?:\/\/[^\s)<>"']+)?\/notes\/([^)\s<>"'#?]+)/gi);
+  const slugs: string[] = [];
+  const seen = new Set<string>();
+
+  for (const match of matches) {
+    const normalizedSlug = normalizeNoteSlugCandidate(match[1]);
+
+    if (!normalizedSlug || seen.has(normalizedSlug)) {
+      continue;
+    }
+
+    seen.add(normalizedSlug);
+    slugs.push(normalizedSlug);
+  }
+
+  return slugs;
 }
 
 function contentLinksToNote(
   noteSlug: string,
   values: Array<string | null | undefined>,
 ) {
-  const target = `/notes/${noteSlug.trim().toLowerCase()}`;
+  const normalizedSlug = normalizeNoteSlugCandidate(noteSlug);
 
-  if (!target || target === "/notes/") {
+  if (!normalizedSlug) {
     return false;
   }
 
-  return values.some((value) => (value ?? "").toLowerCase().includes(target));
+  return values.some((value) => extractNoteReferenceSlugsFromValue(value).includes(normalizedSlug));
 }
 
 function sortBacklinksByRecency(left: NoteBacklink, right: NoteBacklink) {
@@ -214,6 +513,441 @@ function sortBacklinksByRecency(left: NoteBacklink, right: NoteBacklink) {
   }
 
   return left.title.localeCompare(right.title, "zh-CN");
+}
+
+function getPostTranslationRootId(post: {
+  id: string;
+  translationOfId?: string | null;
+}) {
+  return post.translationOfId ?? post.id;
+}
+
+function sortPostLanguageAlternates(left: PostLanguageAlternate, right: PostLanguageAlternate) {
+  if (left.isPrimary !== right.isPrimary) {
+    return left.isPrimary ? -1 : 1;
+  }
+
+  const leftTime = left.publishedAt?.getTime() ?? 0;
+  const rightTime = right.publishedAt?.getTime() ?? 0;
+
+  if (rightTime !== leftTime) {
+    return rightTime - leftTime;
+  }
+
+  return left.title.localeCompare(right.title, "zh-CN");
+}
+
+function extractReferencedNoteSlugs(content: string) {
+  return extractNoteReferenceSlugsFromValue(content);
+}
+
+function buildReferencedPaperSummaries(content: string): ReferencedPaperSummary[] {
+  const references = new Map<string, ReferencedPaperSummary>();
+
+  for (const card of extractMarkdownCitationCards(content)) {
+    const key = getCanonicalPaperReferenceKey({
+      arxivId: card.arxivId,
+      url: card.url,
+      title: card.title,
+    });
+
+    if (!key) {
+      continue;
+    }
+
+    const authors = (card.authors ?? "")
+      .split(",")
+      .map((author) => author.trim())
+      .filter(Boolean);
+
+    const existingReference = references.get(key);
+
+    if (existingReference) {
+      if (existingReference.authors.length === 0 && authors.length > 0) {
+        existingReference.authors = authors;
+      }
+
+      if (!existingReference.url && card.url) {
+        existingReference.url = card.url;
+      }
+
+      if (!existingReference.arxivId && card.arxivId) {
+        existingReference.arxivId = card.arxivId;
+      }
+
+      if (!existingReference.year && card.year) {
+        existingReference.year = card.year;
+      }
+
+      if (!existingReference.note && card.note) {
+        existingReference.note = card.note;
+      }
+
+      continue;
+    }
+
+    references.set(key, {
+      key,
+      title: card.title,
+      authors,
+      url: card.url ?? null,
+      arxivId: card.arxivId ?? null,
+      year: card.year ?? null,
+      note: card.note ?? null,
+    });
+  }
+
+  return Array.from(references.values());
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function contentIncludesExactToken(content: string, token: string) {
+  if (!token) {
+    return false;
+  }
+
+  const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(token)}(?=$|[^a-z0-9])`, "i");
+  return pattern.test(content);
+}
+
+function contentReferencesPaperCandidate(
+  normalizedContent: string,
+  normalizedUrlContent: string,
+  input: {
+    arxivId: string;
+    paperUrl: string;
+    pdfUrl: string | null;
+  },
+) {
+  const canonicalArxivId =
+    getCanonicalArxivId(input.arxivId) ??
+    getCanonicalArxivId(input.paperUrl) ??
+    getCanonicalArxivId(input.pdfUrl);
+
+  if (canonicalArxivId) {
+    const arxivPattern = new RegExp(
+      `(^|[^a-z0-9])${escapeRegExp(canonicalArxivId)}(?:v\\d+)?(?=$|[^a-z0-9])`,
+      "i",
+    );
+
+    if (arxivPattern.test(normalizedContent)) {
+      return true;
+    }
+  }
+
+  const exactUrls = [input.paperUrl, input.pdfUrl]
+    .map((value) => getCanonicalPaperUrl(value))
+    .filter(
+      (value): value is string =>
+        typeof value === "string" && !value.startsWith("arxiv.org/abs/"),
+    );
+
+  return exactUrls.some((url) => contentIncludesExactToken(normalizedUrlContent, url));
+}
+
+function sortResearchItemsByRecentActivity(
+  left: Pick<PublicResearchReadingItem, "lastReadAt" | "updatedAt" | "title">,
+  right: Pick<PublicResearchReadingItem, "lastReadAt" | "updatedAt" | "title">,
+) {
+  const rightTime = new Date(right.lastReadAt ?? right.updatedAt).getTime();
+  const leftTime = new Date(left.lastReadAt ?? left.updatedAt).getTime();
+
+  if (rightTime !== leftTime) {
+    return rightTime - leftTime;
+  }
+
+  return left.title.localeCompare(right.title, "zh-CN");
+}
+
+function sortResearchItemsByCompletion(
+  left: Pick<PublicResearchReadingItem, "completedAt" | "updatedAt" | "title">,
+  right: Pick<PublicResearchReadingItem, "completedAt" | "updatedAt" | "title">,
+) {
+  const rightTime = new Date(right.completedAt ?? right.updatedAt).getTime();
+  const leftTime = new Date(left.completedAt ?? left.updatedAt).getTime();
+
+  if (rightTime !== leftTime) {
+    return rightTime - leftTime;
+  }
+
+  return left.title.localeCompare(right.title, "zh-CN");
+}
+
+function sortPaperFlowReferences(left: PublicPaperFlowReference, right: PublicPaperFlowReference) {
+  const timeDifference = right.publishedAt.getTime() - left.publishedAt.getTime();
+
+  if (timeDifference !== 0) {
+    return timeDifference;
+  }
+
+  return left.title.localeCompare(right.title, "zh-CN");
+}
+
+function collectPaperFlowReferences(
+  items: PaperFlowSourceItem[],
+  contentCandidates: PaperFlowContentCandidate[],
+) {
+  const usageMap = new Map<string, PublicPaperFlowReference[]>();
+  const lookupMap = new Map<string, string[]>();
+
+  for (const item of items) {
+    usageMap.set(item.id, []);
+
+    for (const key of getPaperCitationLookupKeys({
+      arxivId: item.arxivId,
+      url: item.paperUrl,
+      title: item.title,
+    })) {
+      const current = lookupMap.get(key) ?? [];
+      current.push(item.id);
+      lookupMap.set(key, current);
+    }
+  }
+
+  for (const candidate of contentCandidates) {
+    const lowerContent = candidate.content.toLowerCase();
+    const lowerUrlContent = lowerContent.replace(/https?:\/\//g, "");
+    const matchedCounts = new Map<string, number>();
+
+    for (const card of extractMarkdownCitationCards(candidate.content)) {
+      const matchedItemIds = new Set<string>();
+
+      for (const key of getPaperCitationLookupKeys({
+        arxivId: card.arxivId,
+        url: card.url,
+        title: card.title,
+      })) {
+        const matchedIds = lookupMap.get(key);
+
+        if (!matchedIds) {
+          continue;
+        }
+
+        for (const matchedId of matchedIds) {
+          matchedItemIds.add(matchedId);
+        }
+      }
+
+      for (const matchedId of matchedItemIds) {
+        matchedCounts.set(matchedId, (matchedCounts.get(matchedId) ?? 0) + 1);
+      }
+    }
+
+    for (const item of items) {
+      if (matchedCounts.has(item.id)) {
+        continue;
+      }
+
+      if (
+        contentReferencesPaperCandidate(lowerContent, lowerUrlContent, {
+          arxivId: item.arxivId,
+          paperUrl: item.paperUrl,
+          pdfUrl: item.pdfUrl,
+        })
+      ) {
+        matchedCounts.set(item.id, 1);
+      }
+    }
+
+    for (const [itemId, matchedCards] of matchedCounts.entries()) {
+      const references = usageMap.get(itemId);
+
+      if (!references) {
+        continue;
+      }
+
+      references.push({
+        id: candidate.id,
+        kindLabel: candidate.kindLabel,
+        href: candidate.href,
+        title: candidate.title,
+        summary: candidate.summary,
+        publishedAt: candidate.publishedAt,
+        matchedCards,
+      });
+    }
+  }
+
+  for (const references of usageMap.values()) {
+    references.sort(sortPaperFlowReferences);
+  }
+
+  return usageMap;
+}
+
+function buildPublicResearchReadingData(args: {
+  owner: {
+    name: string;
+    avatarUrl: string | null;
+  };
+  items: PaperFlowSourceItem[];
+  contentCandidates: PaperFlowContentCandidate[];
+}): PublicResearchReadingData {
+  const usageMap = collectPaperFlowReferences(args.items, args.contentCandidates);
+
+  const mappedItems: PublicResearchReadingItem[] = args.items.map((item) => {
+    const usageReferences = usageMap.get(item.id) ?? [];
+    const highlight = item.annotations.find((annotation) => Boolean(annotation.quote?.trim())) ?? null;
+
+    return {
+      ...item,
+      latestQuote: highlight?.quote?.trim() ?? null,
+      latestNote: highlight?.content.trim() || null,
+      latestHighlightAt: highlight?.createdAt ?? null,
+      usageCount: usageReferences.length,
+      usageReferences,
+    };
+  });
+
+  const highlightEntries = args.items
+    .flatMap((item) =>
+      item.annotations
+        .filter((annotation) => Boolean(annotation.quote?.trim()))
+        .map((annotation) => ({
+          id: annotation.id,
+          arxivId: item.arxivId,
+          title: item.title,
+          authors: item.authors,
+          paperUrl: item.paperUrl,
+          quote: annotation.quote!.trim(),
+          note: annotation.content.trim() || null,
+          createdAt: annotation.createdAt,
+          usageCount: (usageMap.get(item.id) ?? []).length,
+        })),
+    )
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+
+  return {
+    owner: args.owner,
+    counts: {
+      saved: mappedItems.length,
+      queued: mappedItems.filter((item) => item.status === PaperReadingStatus.TO_READ).length,
+      reading: mappedItems.filter((item) => item.status === PaperReadingStatus.READING).length,
+      completed: mappedItems.filter((item) => item.status === PaperReadingStatus.COMPLETED).length,
+      archived: mappedItems.filter((item) => item.status === PaperReadingStatus.ARCHIVED).length,
+      annotations: mappedItems.reduce((sum, item) => sum + item.annotationCount, 0),
+      highlights: highlightEntries.length,
+      promotedPapers: mappedItems.filter((item) => item.usageCount > 0).length,
+      promotedEntries: mappedItems.reduce((sum, item) => sum + item.usageCount, 0),
+    },
+    continueReading: [...mappedItems]
+      .filter(
+        (item) =>
+          item.status === PaperReadingStatus.READING ||
+          (item.progressPercent > 0 && item.progressPercent < 100),
+      )
+      .sort(sortResearchItemsByRecentActivity)
+      .slice(0, 4),
+    queuedPapers: [...mappedItems]
+      .filter((item) => item.status === PaperReadingStatus.TO_READ)
+      .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime())
+      .slice(0, 6),
+    completedPapers: [...mappedItems]
+      .filter((item) => item.status === PaperReadingStatus.COMPLETED)
+      .sort(sortResearchItemsByCompletion)
+      .slice(0, 4),
+    promotedPapers: [...mappedItems]
+      .filter((item) => item.usageCount > 0)
+      .sort((left, right) => {
+        const leftTime = left.usageReferences[0]?.publishedAt.getTime() ?? 0;
+        const rightTime = right.usageReferences[0]?.publishedAt.getTime() ?? 0;
+
+        if (rightTime !== leftTime) {
+          return rightTime - leftTime;
+        }
+
+        if (right.usageCount !== left.usageCount) {
+          return right.usageCount - left.usageCount;
+        }
+
+        return left.title.localeCompare(right.title, "zh-CN");
+      })
+      .slice(0, 6),
+    recentHighlights: highlightEntries.slice(0, 6),
+  };
+}
+
+function buildDemoPublicResearchReadingData(owner: {
+  name: string;
+  avatarUrl: string | null;
+}): PublicResearchReadingData {
+  const demoItems: PaperFlowSourceItem[] = demoPaperEntries.slice(0, 2).map((entry, index) => ({
+    id: `demo-library-${entry.id}`,
+    arxivId: entry.arxivId,
+    title: entry.title,
+    summary: entry.summary,
+    authors: entry.authors,
+    paperUrl: entry.paperUrl,
+    pdfUrl: entry.pdfUrl ?? null,
+    primaryCategory: entry.primaryCategory ?? null,
+    topicName: entry.topic.name,
+    status: index === 0 ? PaperReadingStatus.READING : PaperReadingStatus.COMPLETED,
+    progressPercent: index === 0 ? 46 : 100,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+    lastReadAt: index === 0 ? entry.updatedAt : new Date(entry.updatedAt.getTime() - 1000 * 60 * 90),
+    completedAt: index === 0 ? null : entry.updatedAt,
+    annotationCount: 1,
+    annotations: [
+      {
+        id: `demo-annotation-${entry.id}`,
+        content:
+          index === 0
+            ? "Useful for thinking about transparent tool calls and intermediate state in agent workflows."
+            : "A clean framing for evaluation loops that can be turned into a checklist note or an implementation review post.",
+        quote:
+          index === 0
+            ? "Expose intermediate tool calls and state transitions so users can audit the workflow."
+            : "Evaluation should separate retrieval failure from answer failure before teams optimize the wrong component.",
+        createdAt: entry.updatedAt,
+      },
+    ],
+  }));
+
+  const demoContentCandidates: PaperFlowContentCandidate[] = [
+    ...demoPosts
+      .filter((post) => isPublicPostLike(post))
+      .map((post) => ({
+        id: post.id,
+        kindLabel: "Blog post",
+        href: `/blog/${post.slug}`,
+        title: post.title,
+        summary: post.excerpt,
+        content: post.content,
+        publishedAt: post.publishedAt!,
+      })),
+    ...demoNotes
+      .filter((note) => isPublicPostLike(note))
+      .map((note) => ({
+        id: note.id,
+        kindLabel: "Note",
+        href: `/notes/${note.slug}`,
+        title: note.title,
+        summary: note.summary,
+        content: note.content,
+        publishedAt: note.publishedAt!,
+      })),
+    ...demoWeeklyDigests
+      .filter((digest) => isLivePublishedAt(digest.publishedAt))
+      .map((digest) => ({
+        id: digest.id,
+        kindLabel: "Weekly digest",
+        href: `/digest/${digest.slug}`,
+        title: digest.title,
+        summary: digest.summary,
+        content: [digest.summary, digest.content, digest.highlights.join("\n")].join("\n"),
+        publishedAt: digest.publishedAt,
+      })),
+  ];
+
+  return buildPublicResearchReadingData({
+    owner,
+    items: demoItems,
+    contentCandidates: demoContentCandidates,
+  });
 }
 
 function buildTagArchiveData(
@@ -877,14 +1611,26 @@ export async function getPostReadingContext(input: {
   postId: string;
   category: string;
   tags: string[];
+  translationRootId?: string | null;
 }) {
   const posts = await getPublishedPosts();
   const normalizedCategory = normalizeTaxonomyValue(input.category);
   const normalizedTags = new Set(
     input.tags.map((tag) => normalizeTaxonomyValue(tag)).filter(Boolean),
   );
+  const visiblePosts = posts.filter((post) => {
+    if (post.id === input.postId) {
+      return true;
+    }
 
-  const chronologicalPosts = [...posts].sort((left, right) => {
+    if (!input.translationRootId) {
+      return true;
+    }
+
+    return getPostTranslationRootId(post) !== input.translationRootId;
+  });
+
+  const chronologicalPosts = [...visiblePosts].sort((left, right) => {
     const timeDifference = getPostSortTimestamp(right) - getPostSortTimestamp(left);
 
     if (timeDifference !== 0) {
@@ -901,7 +1647,7 @@ export async function getPostReadingContext(input: {
       ? chronologicalPosts[currentIndex + 1]
       : null;
 
-  const relatedPosts = posts
+  const relatedPosts = visiblePosts
     .filter((post) => post.id !== input.postId)
     .map((post) => {
       const sharedTagCount = post.tags.reduce((total, tag) => {
@@ -1388,6 +2134,123 @@ export async function getPostBySlug(slug: string) {
   );
 }
 
+export async function getPostLanguageAlternates(
+  postId: string,
+  translationOfId?: string | null,
+) {
+  const baseId = translationOfId ?? postId;
+
+  if (!baseId) {
+    return [] as PostLanguageAlternate[];
+  }
+
+  if (!isDatabaseConfigured()) {
+    return demoPosts
+      .filter(
+        (post) =>
+          isPublicPostLike(post) &&
+          (post.id === baseId || (post.translationOfId ?? null) === baseId),
+      )
+      .map((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        language: post.language ?? DEFAULT_CONTENT_LANGUAGE,
+        publishedAt: post.publishedAt ?? null,
+        isPrimary: post.id === baseId,
+      }))
+      .sort(sortPostLanguageAlternates);
+  }
+
+  const cutoff = getPublishingCutoff();
+
+  const alternates = await prisma.post.findMany({
+    where: {
+      ...publicPostWhere(cutoff),
+      OR: [{ id: baseId }, { translationOfId: baseId }],
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      language: true,
+      translationOfId: true,
+      publishedAt: true,
+    },
+  });
+
+  return alternates
+    .map((post) => ({
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      language: post.language || DEFAULT_CONTENT_LANGUAGE,
+      publishedAt: post.publishedAt,
+      isPrimary: post.id === baseId,
+    }))
+    .sort(sortPostLanguageAlternates);
+}
+
+export async function getPostKnowledgeNetwork(content: string) {
+  const referencedPapers = buildReferencedPaperSummaries(content);
+  const noteSlugs = extractReferencedNoteSlugs(content);
+
+  if (!isDatabaseConfigured()) {
+    return {
+      notes: demoNotes
+        .filter(
+          (note) => isPublicPostLike(note) && noteSlugs.includes(note.slug),
+        )
+        .map((note) => ({
+          id: note.id,
+          title: note.title,
+          slug: note.slug,
+          summary: note.summary,
+          noteType: note.noteType ?? null,
+          publishedAt: note.publishedAt ?? null,
+        })),
+      papers: referencedPapers,
+    };
+  }
+
+  const cutoff = getPublishingCutoff();
+  const notes =
+    noteSlugs.length > 0
+      ? await prisma.note.findMany({
+          where: {
+            ...publicNoteWhere(cutoff),
+            slug: { in: noteSlugs },
+          },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            summary: true,
+            noteType: true,
+            publishedAt: true,
+          },
+        })
+      : [];
+
+  const notesBySlug = new Map(notes.map((note) => [note.slug, note]));
+  const orderedNotes: ReferencedNoteSummary[] = noteSlugs
+    .map((slug) => notesBySlug.get(slug))
+    .filter((note): note is (typeof notes)[number] => Boolean(note))
+    .map((note) => ({
+      id: note.id,
+      title: note.title,
+      slug: note.slug,
+      summary: note.summary,
+      noteType: note.noteType ?? null,
+      publishedAt: note.publishedAt,
+    }));
+
+  return {
+    notes: orderedNotes,
+    papers: referencedPapers,
+  };
+}
+
 export async function getNoteBySlug(slug: string) {
   if (!isDatabaseConfigured()) {
     const note = demoNotes.find((entry) => entry.slug === slug) ?? null;
@@ -1459,7 +2322,7 @@ export async function getNoteBacklinks(noteSlug: string) {
         .map((entry) => ({
           id: entry.id,
           title: entry.title,
-          href: "/journal",
+          href: `/journal/${entry.slug}`,
           kindLabel: "Journal entry",
           summary: entry.summary,
           publishedAt: entry.publishedAt,
@@ -1524,6 +2387,7 @@ export async function getNoteBacklinks(noteSlug: string) {
       select: {
         id: true,
         title: true,
+        slug: true,
         summary: true,
         content: true,
         publishedAt: true,
@@ -1571,7 +2435,7 @@ export async function getNoteBacklinks(noteSlug: string) {
       .map((entry) => ({
         id: entry.id,
         title: entry.title,
-        href: "/journal",
+        href: `/journal/${entry.slug}`,
         kindLabel: "Journal entry",
         summary: entry.summary,
         publishedAt: entry.publishedAt,
@@ -1591,7 +2455,10 @@ export async function getNoteBacklinks(noteSlug: string) {
 
 export async function getRecentJournalEntries(limit = 4) {
   if (!isDatabaseConfigured()) {
-    return demoJournalEntries.filter((entry) => isPublicJournalLike(entry)).slice(0, limit);
+    return [...demoJournalEntries]
+      .filter((entry) => isPublicJournalLike(entry))
+      .sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime())
+      .slice(0, limit);
   }
 
   const cutoff = getPublishingCutoff();
@@ -1599,6 +2466,21 @@ export async function getRecentJournalEntries(limit = 4) {
     where: publicJournalWhere(cutoff),
     orderBy: { publishedAt: "desc" },
     take: limit,
+  });
+}
+
+export async function getJournalEntryBySlug(slug: string) {
+  if (!isDatabaseConfigured()) {
+    const entry = demoJournalEntries.find((item) => item.slug === slug) ?? null;
+    return entry && isPublicJournalLike(entry) ? entry : null;
+  }
+
+  const cutoff = getPublishingCutoff();
+  return prisma.journalEntry.findFirst({
+    where: {
+      slug,
+      ...publicJournalWhere(cutoff),
+    },
   });
 }
 
@@ -1641,6 +2523,8 @@ export async function getDashboardOverview() {
       suspendedUsers: 0,
       auditLogs: 0,
       series: 0,
+      emailSubscribers: 0,
+      activeEmailSubscribers: 0,
     };
   }
 
@@ -1662,6 +2546,8 @@ export async function getDashboardOverview() {
     suspendedUsers,
     auditLogs,
     series,
+    emailSubscribers,
+    activeEmailSubscribers,
   ] = await Promise.all([
     prisma.post.count(),
     prisma.post.count({ where: { status: PostStatus.PUBLISHED } }),
@@ -1678,6 +2564,14 @@ export async function getDashboardOverview() {
     prisma.user.count({ where: { status: UserStatus.SUSPENDED } }),
     prisma.adminAuditLog.count(),
     prisma.contentSeries.count(),
+    prisma.emailSubscriber.count(),
+    prisma.emailSubscriber.count({
+      where: {
+        isActive: true,
+        confirmedAt: { not: null },
+        unsubscribedAt: null,
+      },
+    }),
   ]);
 
   return {
@@ -1696,6 +2590,170 @@ export async function getDashboardOverview() {
     suspendedUsers,
     auditLogs,
     series,
+    emailSubscribers,
+    activeEmailSubscribers,
+  };
+}
+
+export async function getAdminSubscriptionOverview() {
+  if (!isDatabaseConfigured()) {
+    return {
+      totals: {
+        totalSubscribers: 0,
+        activeSubscribers: 0,
+        pendingSubscribers: 0,
+        unsubscribedSubscribers: 0,
+        unsubscribeRate: 0,
+        averageNotificationCount: 0,
+        averageDigestNotificationCount: 0,
+      },
+      coverage: {
+        allPostsSubscribers: 0,
+        filteredSubscribers: 0,
+        categoryTargetedSubscribers: 0,
+        tagTargetedSubscribers: 0,
+        notifiedSubscribers: 0,
+        postEnabledSubscribers: 0,
+        digestEnabledSubscribers: 0,
+        digestNotifiedSubscribers: 0,
+      },
+      topCategories: [] as SubscriptionPreferenceCount[],
+      topTags: [] as SubscriptionPreferenceCount[],
+      recentSubscribers: [] as SubscriptionRecentSubscriber[],
+      recentNotifications: [] as SubscriptionRecentSubscriber[],
+    };
+  }
+
+  const subscribers = await prisma.emailSubscriber.findMany({
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      postNotificationsEnabled: true,
+      digestNotificationsEnabled: true,
+      categories: true,
+      tags: true,
+      isActive: true,
+      confirmedAt: true,
+      unsubscribedAt: true,
+      confirmationToken: true,
+      confirmationExpiresAt: true,
+      notificationCount: true,
+      lastNotifiedAt: true,
+      digestNotificationCount: true,
+      lastDigestNotifiedAt: true,
+      createdAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+  });
+
+  const allSubscribers = subscribers.map((subscriber) => ({
+    id: subscriber.id,
+    email: subscriber.email,
+    name: subscriber.name,
+    status: resolveSubscriptionStatus(subscriber),
+    postNotificationsEnabled: subscriber.postNotificationsEnabled,
+    digestNotificationsEnabled: subscriber.digestNotificationsEnabled,
+    categories: subscriber.categories,
+    tags: subscriber.tags,
+    createdAt: subscriber.createdAt,
+    confirmedAt: subscriber.confirmedAt,
+    unsubscribedAt: subscriber.unsubscribedAt,
+    notificationCount: subscriber.notificationCount,
+    lastNotifiedAt: subscriber.lastNotifiedAt,
+    digestNotificationCount: subscriber.digestNotificationCount,
+    lastDigestNotifiedAt: subscriber.lastDigestNotifiedAt,
+  }));
+  const recentSubscribers = allSubscribers.slice(0, 12);
+  const activeSubscribers = allSubscribers.filter((subscriber) => subscriber.status === "active");
+  const pendingSubscribers = allSubscribers.filter((subscriber) => subscriber.status === "pending");
+  const unsubscribedSubscribers = allSubscribers.filter(
+    (subscriber) => subscriber.status === "unsubscribed",
+  );
+  const postEnabledSubscribers = activeSubscribers.filter(
+    (subscriber) => subscriber.postNotificationsEnabled,
+  );
+  const digestEnabledSubscribers = activeSubscribers.filter(
+    (subscriber) => subscriber.digestNotificationsEnabled,
+  );
+  const allPostsSubscribers = postEnabledSubscribers.filter(
+    (subscriber) => subscriber.categories.length === 0 && subscriber.tags.length === 0,
+  );
+  const filteredSubscribers = postEnabledSubscribers.filter(
+    (subscriber) => subscriber.categories.length > 0 || subscriber.tags.length > 0,
+  );
+  const categoryTargetedSubscribers = postEnabledSubscribers.filter(
+    (subscriber) => subscriber.categories.length > 0,
+  );
+  const tagTargetedSubscribers = postEnabledSubscribers.filter(
+    (subscriber) => subscriber.tags.length > 0,
+  );
+  const notifiedSubscribers = postEnabledSubscribers.filter(
+    (subscriber) => subscriber.notificationCount > 0 || subscriber.lastNotifiedAt,
+  );
+  const digestNotifiedSubscribers = digestEnabledSubscribers.filter(
+    (subscriber) => subscriber.digestNotificationCount > 0 || subscriber.lastDigestNotifiedAt,
+  );
+  const totalNotificationCount = postEnabledSubscribers.reduce(
+    (sum, subscriber) => sum + subscriber.notificationCount,
+    0,
+  );
+  const totalDigestNotificationCount = digestEnabledSubscribers.reduce(
+    (sum, subscriber) => sum + subscriber.digestNotificationCount,
+    0,
+  );
+
+  return {
+    totals: {
+      totalSubscribers: subscribers.length,
+      activeSubscribers: activeSubscribers.length,
+      pendingSubscribers: pendingSubscribers.length,
+      unsubscribedSubscribers: unsubscribedSubscribers.length,
+      unsubscribeRate:
+        subscribers.length > 0 ? unsubscribedSubscribers.length / subscribers.length : 0,
+      averageNotificationCount:
+        postEnabledSubscribers.length > 0 ? totalNotificationCount / postEnabledSubscribers.length : 0,
+      averageDigestNotificationCount:
+        digestEnabledSubscribers.length > 0
+          ? totalDigestNotificationCount / digestEnabledSubscribers.length
+          : 0,
+    },
+    coverage: {
+      allPostsSubscribers: allPostsSubscribers.length,
+      filteredSubscribers: filteredSubscribers.length,
+      categoryTargetedSubscribers: categoryTargetedSubscribers.length,
+      tagTargetedSubscribers: tagTargetedSubscribers.length,
+      notifiedSubscribers: notifiedSubscribers.length,
+      postEnabledSubscribers: postEnabledSubscribers.length,
+      digestEnabledSubscribers: digestEnabledSubscribers.length,
+      digestNotifiedSubscribers: digestNotifiedSubscribers.length,
+    },
+    topCategories: buildSubscriptionPreferenceCounts(postEnabledSubscribers, "categories"),
+    topTags: buildSubscriptionPreferenceCounts(postEnabledSubscribers, "tags"),
+    recentSubscribers,
+    recentNotifications: [...activeSubscribers]
+      .filter((subscriber) => subscriber.lastNotifiedAt || subscriber.lastDigestNotifiedAt)
+      .sort((left, right) => {
+        const leftTime = Math.max(
+          left.lastNotifiedAt?.getTime() ?? 0,
+          left.lastDigestNotifiedAt?.getTime() ?? 0,
+        );
+        const rightTime = Math.max(
+          right.lastNotifiedAt?.getTime() ?? 0,
+          right.lastDigestNotifiedAt?.getTime() ?? 0,
+        );
+
+        if (rightTime !== leftTime) {
+          return rightTime - leftTime;
+        }
+
+        return (
+          right.notificationCount +
+          right.digestNotificationCount -
+          (left.notificationCount + left.digestNotificationCount)
+        );
+      })
+      .slice(0, 12),
   };
 }
 
@@ -1785,6 +2843,145 @@ export async function getAdminSeriesOptions() {
   });
 }
 
+export async function getAdminPostCategoryOptions() {
+  if (!isDatabaseConfigured()) {
+    return [] as string[];
+  }
+
+  const posts = await prisma.post.findMany({
+    select: {
+      category: true,
+      updatedAt: true,
+    },
+    orderBy: [{ updatedAt: "desc" }, { category: "asc" }],
+  });
+
+  const seen = new Set<string>();
+  const categories: string[] = [];
+
+  for (const post of posts) {
+    const category = post.category.trim();
+    const normalizedCategory = normalizeTaxonomyValue(category);
+
+    if (!category || seen.has(normalizedCategory)) {
+      continue;
+    }
+
+    seen.add(normalizedCategory);
+    categories.push(category);
+  }
+
+  return categories;
+}
+
+export async function getAdminPostCategories() {
+  if (!isDatabaseConfigured()) {
+    return [] as AdminPostCategoryItem[];
+  }
+
+  const [posts, subscribers] = await Promise.all([
+    prisma.post.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        category: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+      orderBy: [{ updatedAt: "desc" }, { publishedAt: "desc" }, { title: "asc" }],
+    }),
+    prisma.emailSubscriber.findMany({
+      select: {
+        categories: true,
+      },
+    }),
+  ]);
+
+  const categories = new Map<string, AdminPostCategoryItem>();
+
+  for (const post of posts) {
+    const category = post.category.trim();
+    const normalizedCategory = normalizeTaxonomyValue(category);
+
+    if (!category || !normalizedCategory) {
+      continue;
+    }
+
+    const current = categories.get(normalizedCategory) ?? {
+      category,
+      normalizedCategory,
+      totalPosts: 0,
+      publishedPosts: 0,
+      subscriberCount: 0,
+      latestPublishedAt: null,
+      latestUpdatedAt: null,
+      recentPosts: [],
+    };
+
+    current.totalPosts += 1;
+    current.latestUpdatedAt =
+      !current.latestUpdatedAt || post.updatedAt > current.latestUpdatedAt
+        ? post.updatedAt
+        : current.latestUpdatedAt;
+    current.latestPublishedAt =
+      !current.latestPublishedAt || (post.publishedAt && post.publishedAt > current.latestPublishedAt)
+        ? post.publishedAt
+        : current.latestPublishedAt;
+
+    if (post.status === PostStatus.PUBLISHED) {
+      current.publishedPosts += 1;
+    }
+
+    if (current.recentPosts.length < 3) {
+      current.recentPosts.push({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        status: post.status,
+        publishedAt: post.publishedAt,
+      });
+    }
+
+    categories.set(normalizedCategory, current);
+  }
+
+  for (const subscriber of subscribers) {
+    const seen = new Set<string>();
+
+    for (const rawCategory of subscriber.categories) {
+      const normalizedCategory = normalizeTaxonomyValue(rawCategory);
+
+      if (!normalizedCategory || seen.has(normalizedCategory)) {
+        continue;
+      }
+
+      seen.add(normalizedCategory);
+      const current = categories.get(normalizedCategory);
+
+      if (current) {
+        current.subscriberCount += 1;
+      }
+    }
+  }
+
+  return [...categories.values()].sort((left, right) => {
+    if (right.totalPosts !== left.totalPosts) {
+      return right.totalPosts - left.totalPosts;
+    }
+
+    const rightTime = right.latestUpdatedAt?.getTime() ?? 0;
+    const leftTime = left.latestUpdatedAt?.getTime() ?? 0;
+
+    if (rightTime !== leftTime) {
+      return rightTime - leftTime;
+    }
+
+    return left.category.localeCompare(right.category, "zh-CN");
+  });
+}
+
 export async function getAdminPosts() {
   if (!isDatabaseConfigured()) {
     return [];
@@ -1793,6 +2990,51 @@ export async function getAdminPosts() {
   return prisma.post.findMany({
     include: { author: true, _count: { select: { comments: true } } },
     orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+  });
+}
+
+export async function getAdminPostLocalizationOptions(currentPostId?: string) {
+  if (!isDatabaseConfigured()) {
+    return demoPosts
+      .filter(
+        (post) =>
+          (post.translationOfId ?? null) === null &&
+          (!currentPostId || post.id !== currentPostId),
+      )
+      .map((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        language: post.language ?? DEFAULT_CONTENT_LANGUAGE,
+        status: post.status as PostStatus,
+        publishedAt: post.publishedAt ?? null,
+      }))
+      .sort((left, right) => {
+        const rightTime = new Date(right.publishedAt ?? 0).getTime();
+        const leftTime = new Date(left.publishedAt ?? 0).getTime();
+
+        if (rightTime !== leftTime) {
+          return rightTime - leftTime;
+        }
+
+        return left.title.localeCompare(right.title, "zh-CN");
+      });
+  }
+
+  return prisma.post.findMany({
+    where: {
+      translationOfId: null,
+      ...(currentPostId ? { id: { not: currentPostId } } : {}),
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      language: true,
+      status: true,
+      publishedAt: true,
+    },
+    orderBy: [{ updatedAt: "desc" }, { title: "asc" }],
   });
 }
 
@@ -2128,16 +3370,47 @@ export async function getAdminProfile() {
   )) ?? demoProfile;
 }
 
-export async function getPaperArchive(limit = 60) {
+export async function getPaperArchive(limit = 60, skip = 0) {
   if (!isDatabaseConfigured()) {
-    return demoPaperEntries.slice(0, limit);
+    return demoPaperEntries.slice(skip, skip + limit);
   }
 
   return prisma.dailyPaperEntry.findMany({
     include: { topic: true },
     orderBy: [{ digestDate: "desc" }, { topic: { name: "asc" } }, { publishedAt: "desc" }],
+    skip,
     take: limit,
   });
+}
+
+export async function getPaperArchiveStats() {
+  if (!isDatabaseConfigured()) {
+    return {
+      totalCount: demoPaperEntries.length,
+      topicCount: new Set(demoPaperEntries.map((entry) => entry.topicId)).size,
+      digestBatchCount: new Set(
+        demoPaperEntries.map((entry) => new Date(entry.digestDate).toISOString()),
+      ).size,
+    };
+  }
+
+  const [totalCount, topicEntries, digestEntries] = await Promise.all([
+    prisma.dailyPaperEntry.count(),
+    prisma.dailyPaperEntry.findMany({
+      distinct: ["topicId"],
+      select: { topicId: true },
+    }),
+    prisma.dailyPaperEntry.findMany({
+      distinct: ["digestDate"],
+      select: { digestDate: true },
+    }),
+  ]);
+
+  return {
+    totalCount,
+    topicCount: topicEntries.length,
+    digestBatchCount: digestEntries.length,
+  };
 }
 
 export async function getAdminPaperTopics() {
@@ -2170,6 +3443,139 @@ export async function getRecentPaperEntries(limit = 24) {
     include: { topic: true },
     orderBy: [{ digestDate: "desc" }, { publishedAt: "desc" }],
     take: limit,
+  });
+}
+
+export async function getPublicResearchReadingList() {
+  const owner = await getSiteOwnerIdentity();
+
+  if (!isDatabaseConfigured()) {
+    return buildDemoPublicResearchReadingData(owner);
+  }
+
+  const adminUser = await prisma.user.findFirst({
+    where: {
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+    select: {
+      id: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  if (!adminUser) {
+    return buildPublicResearchReadingData({
+      owner,
+      items: [],
+      contentCandidates: [],
+    });
+  }
+
+  const cutoff = getPublishingCutoff();
+  const [libraryItems, posts, notes, digests] = await Promise.all([
+    getUserPaperLibrary(adminUser.id),
+    prisma.post.findMany({
+      where: publicPostWhere(cutoff),
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: true,
+        publishedAt: true,
+      },
+    }),
+    prisma.note.findMany({
+      where: publicNoteWhere(cutoff),
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        content: true,
+        publishedAt: true,
+      },
+    }),
+    prisma.weeklyDigest.findMany({
+      where: publicWeeklyDigestWhere(cutoff),
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        summary: true,
+        content: true,
+        highlights: true,
+        publishedAt: true,
+      },
+    }),
+  ]);
+
+  const items: PaperFlowSourceItem[] = libraryItems.map((item) => ({
+    id: item.id,
+    arxivId: item.arxivId,
+    title: item.title,
+    summary: item.summary,
+    authors: item.authors,
+    paperUrl: item.paperUrl,
+    pdfUrl: item.pdfUrl ?? null,
+    primaryCategory: item.primaryCategory ?? null,
+    topicName: item.topicName ?? null,
+    status: item.status,
+    progressPercent: item.progressPercent,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    lastReadAt: item.lastReadAt ?? null,
+    completedAt: item.completedAt ?? null,
+    annotationCount: item._count.annotations,
+    annotations: item.annotations.map((annotation) => ({
+      id: annotation.id,
+      content: annotation.content,
+      quote: annotation.quote,
+      createdAt: annotation.createdAt,
+    })),
+  }));
+
+  const contentCandidates: PaperFlowContentCandidate[] = [
+    ...posts
+      .filter((post) => Boolean(post.publishedAt))
+      .map((post) => ({
+        id: post.id,
+        kindLabel: "Blog post",
+        href: `/blog/${post.slug}`,
+        title: post.title,
+        summary: post.excerpt,
+        content: post.content,
+        publishedAt: post.publishedAt!,
+      })),
+    ...notes
+      .filter((note) => Boolean(note.publishedAt))
+      .map((note) => ({
+        id: note.id,
+        kindLabel: "Note",
+        href: `/notes/${note.slug}`,
+        title: note.title,
+        summary: note.summary,
+        content: note.content,
+        publishedAt: note.publishedAt!,
+      })),
+    ...digests.map((digest) => ({
+      id: digest.id,
+      kindLabel: "Weekly digest",
+      href: `/digest/${digest.slug}`,
+      title: digest.title,
+      summary: digest.summary,
+      content: [digest.summary, digest.content, digest.highlights.join("\n")].join("\n"),
+      publishedAt: digest.publishedAt,
+    })),
+  ];
+
+  return buildPublicResearchReadingData({
+    owner,
+    items,
+    contentCandidates,
   });
 }
 
@@ -2453,14 +3859,16 @@ export async function getSitemapEntries() {
     "/archive",
     "/blog",
     "/categories",
+    "/gallery",
     "/journal",
     "/notes",
     "/papers",
+    "/papers/reading-list",
     "/digest",
     "/series",
     "/search",
+    "/subscribe",
     "/tags",
-    "/login",
   ];
 
   if (!isDatabaseConfigured()) {
@@ -2477,6 +3885,7 @@ export async function getSitemapEntries() {
       notes: visibleNotes.map((note) => note.slug),
       journal: visibleJournalEntries.map((entry) => entry.slug),
       digests: visibleDigests.map((digest) => digest.slug),
+      gallery: [],
       series: [],
       tags: tagEntries,
       categories: categoryEntries,
@@ -2484,7 +3893,7 @@ export async function getSitemapEntries() {
   }
 
   const cutoff = getPublishingCutoff();
-  const [posts, notes, journal, digests, series, tags, categories] = await Promise.all([
+  const [posts, notes, journal, digests, gallery, series, tags, categories] = await Promise.all([
     prisma.post.findMany({ where: publicPostWhere(cutoff), select: { slug: true } }),
     prisma.note.findMany({ where: publicNoteWhere(cutoff), select: { slug: true } }),
     prisma.journalEntry.findMany({
@@ -2492,6 +3901,17 @@ export async function getSitemapEntries() {
       select: { slug: true },
     }),
     prisma.weeklyDigest.findMany({ where: publicWeeklyDigestWhere(cutoff), select: { slug: true } }),
+    hasGalleryAlbumSupport()
+      ? prisma.galleryAlbum.findMany({
+          where: {
+            status: PostStatus.PUBLISHED,
+            publishedAt: {
+              lte: cutoff,
+            },
+          },
+          select: { slug: true },
+        })
+      : Promise.resolve([] as Array<{ slug: string }>),
     prisma.contentSeries.findMany({
       where: {
         OR: [
@@ -2512,6 +3932,7 @@ export async function getSitemapEntries() {
     notes: notes.map((note) => note.slug),
     journal: journal.map((entry) => entry.slug),
     digests: digests.map((digest) => digest.slug),
+    gallery: gallery.map((item) => item.slug),
     series: series.map((item) => item.slug),
     tags: tags.map((item) => item.tag),
     categories: categories.map((item) => item.category),

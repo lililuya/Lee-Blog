@@ -120,6 +120,35 @@ model User {
   @@index([emailVerificationRequired, emailVerifiedAt])
 }
 
+model EmailSubscriber {
+  id                     String   @id @default(cuid())
+  email                  String   @unique
+  name                   String?
+  categories             String[] @default([])
+  tags                   String[] @default([])
+  postNotificationsEnabled Boolean  @default(true)
+  digestNotificationsEnabled Boolean @default(false)
+  isActive               Boolean  @default(false)
+  confirmedAt            DateTime?
+  unsubscribedAt         DateTime?
+  confirmationToken      String?  @unique
+  confirmationExpiresAt  DateTime?
+  unsubscribeToken       String   @unique
+  notificationCount      Int      @default(0)
+  lastNotifiedAt         DateTime?
+  digestNotificationCount Int      @default(0)
+  lastDigestNotifiedAt    DateTime?
+  lastDigestNotificationDigestId String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([isActive, confirmedAt, unsubscribedAt])
+  @@index([postNotificationsEnabled, isActive, lastNotifiedAt(sort: Desc)])
+  @@index([digestNotificationsEnabled, isActive, lastDigestNotifiedAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([lastNotifiedAt(sort: Desc)])
+}
+
 model UserNotification {
   id        String   @id @default(cuid())
   type      String
@@ -228,6 +257,7 @@ model SiteProfile {
   backgroundMediaMode String   @default("IMAGE")
   backgroundOverlayOpacity Int @default(22)
   assistantAvatarUrl String?
+  chatEnabledForReaders Boolean @default(false)
   researchAreas      String[]
   educationMarkdown  String   @db.Text
   experienceMarkdown String   @db.Text
@@ -261,6 +291,7 @@ model Post {
   excerpt         String     @db.Text
   content         String     @db.Text
   category        String
+  language        String     @default("en-US")
   tags            String[]
   status          PostStatus @default(DRAFT)
   pinned          Boolean    @default(false)
@@ -269,18 +300,23 @@ model Post {
   readTimeMinutes Int        @default(5)
   seriesId        String?
   seriesOrder     Int?
+  translationOfId String?
   publishedAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   authorId        String
   author          User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  translationOf   Post?      @relation("PostTranslations", fields: [translationOfId], references: [id], onDelete: SetNull)
+  translations    Post[]     @relation("PostTranslations")
   comments        Comment[]
   revisions       PostRevision[]
   series          ContentSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
 
   @@index([status, pinned, publishedAt(sort: Desc)])
   @@index([category])
+  @@index([language, publishedAt(sort: Desc)])
   @@index([seriesId, seriesOrder])
+  @@index([translationOfId, publishedAt(sort: Desc)])
 }
 
 model PostRevision {
@@ -291,6 +327,7 @@ model PostRevision {
   excerpt         String     @db.Text
   content         String     @db.Text
   category        String
+  language        String     @default("en-US")
   tags            String[]
   status          PostStatus
   pinned          Boolean
@@ -299,6 +336,7 @@ model PostRevision {
   readTimeMinutes Int
   seriesId        String?
   seriesOrder     Int?
+  translationOfId String?
   publishedAt     DateTime?
   createdAt       DateTime   @default(now())
   postId          String
@@ -652,4 +690,27 @@ model RagKnowledgeChunk {
   @@index([visibility, ownerUserId])
   @@index([sourceType, sourceId])
   @@index([updatedAt(sort: Desc)])
+}
+
+model RagQueryLog {
+  id               String   @id @default(cuid())
+  query            String
+  normalizedQuery  String
+  mode             String   @default("CHAT")
+  pathname         String?
+  sourceCount      Int      @default(0)
+  publicSourceCount Int     @default(0)
+  privateSourceCount Int    @default(0)
+  usedPageContext  Boolean  @default(false)
+  topScore         Int?
+  topSourceTitle   String?
+  topSourceKindLabel String?
+  topSourceHref    String?
+  topSourceTitles  String[] @default([])
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([mode, createdAt(sort: Desc)])
+  @@index([normalizedQuery, createdAt(sort: Desc)])
+  @@index([sourceCount, createdAt(sort: Desc)])
 }

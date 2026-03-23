@@ -76,6 +76,7 @@
 - `/admin/posts`
 - `/admin/posts/new`
 - `/admin/posts/[id]`
+- `/admin/categories`
 - `/admin/notes`
 - `/admin/notes/new`
 - `/admin/notes/[id]`
@@ -144,6 +145,7 @@
 ### 内容动作
 
 - 文章新建 / 更新
+- 文章分类改名 / 合并
 - Note 新建 / 更新
 - Journal 新建 / 更新
 - 图集新建 / 更新 / 删除

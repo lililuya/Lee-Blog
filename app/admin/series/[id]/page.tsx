@@ -7,6 +7,7 @@ import {
   updateContentSeriesAction,
 } from "@/lib/actions/series-actions";
 import { getAdminContentSeriesById } from "@/lib/queries";
+import { formatPostStatusLabel } from "@/lib/ui-labels";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -32,46 +33,46 @@ export default async function EditSeriesPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="section-kicker">Series</p>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight">Edit series</h1>
+          <p className="section-kicker">专题</p>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight">编辑专题</h1>
         </div>
-      <form
-        action={deleteContentSeriesAction}
-        data-confirm-message="Delete this series? Linked posts, notes, and digests will become standalone items."
-      >
+        <form
+          action={deleteContentSeriesAction}
+          data-confirm-message="确认删除这个专题吗？关联的文章、笔记和摘要会变成独立条目。"
+        >
           <input type="hidden" name="seriesId" value={series.id} />
           <button type="submit" className="btn-secondary text-rose-700">
             <Trash2 className="h-4 w-4" />
-            Delete series
+            删除专题
           </button>
         </form>
       </div>
 
       {resolvedSearchParams.saved ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          Series saved.
+          专题已保存。
         </div>
       ) : null}
 
       <SeriesForm
         action={updateContentSeriesAction}
-        submitLabel="Save changes"
-        confirmMessage="Save changes to this series? Linked content will immediately reflect the updated series metadata."
+        submitLabel="保存更改"
+        confirmMessage="确认保存这个专题的更改吗？关联内容会立即使用更新后的专题信息。"
         series={series}
       />
 
       <section className="rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
         <div className="space-y-2">
-          <p className="section-kicker">Linked content</p>
-          <h2 className="font-serif text-3xl font-semibold tracking-tight">Current series members</h2>
+          <p className="section-kicker">关联内容</p>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">当前专题成员</h2>
           <p className="text-sm leading-7 text-[var(--ink-soft)]">
-            Attach content from the post, note, and digest editors. Items are shown here in the stored series order.
+            可以从文章、笔记和摘要编辑器中挂载内容。这里会按照当前保存的专题顺序展示。
           </p>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="space-y-4">
-            <h3 className="font-serif text-2xl font-semibold tracking-tight">Posts</h3>
+            <h3 className="font-serif text-2xl font-semibold tracking-tight">文章</h3>
             {series.posts.length ? (
               series.posts.map((post) => (
                 <Link
@@ -84,22 +85,22 @@ export default async function EditSeriesPage({
                     <ArrowUpRight className="h-4 w-4 text-[var(--accent-strong)]" />
                   </div>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                    Order {post.seriesOrder ?? "N/A"} · {post.status}
+                    顺序 {post.seriesOrder ?? "未设置"} · {formatPostStatusLabel(post.status)}
                   </p>
                   <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                    {post.publishedAt ? formatDate(post.publishedAt, "yyyy-MM-dd HH:mm") : "Not published"}
+                    {post.publishedAt ? formatDate(post.publishedAt, "yyyy-MM-dd HH:mm") : "未发布"}
                   </p>
                 </Link>
               ))
             ) : (
               <div className="rounded-[1.4rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.45)] px-4 py-5 text-sm text-[var(--ink-soft)]">
-                No posts linked yet.
+                还没有关联文章。
               </div>
             )}
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-serif text-2xl font-semibold tracking-tight">Notes</h3>
+            <h3 className="font-serif text-2xl font-semibold tracking-tight">笔记</h3>
             {series.notes.length ? (
               series.notes.map((note) => (
                 <Link
@@ -112,22 +113,22 @@ export default async function EditSeriesPage({
                     <ArrowUpRight className="h-4 w-4 text-[var(--accent-strong)]" />
                   </div>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                    Order {note.seriesOrder ?? "N/A"} · {note.status}
+                    顺序 {note.seriesOrder ?? "未设置"} · {formatPostStatusLabel(note.status)}
                   </p>
                   <p className="mt-2 text-sm text-[var(--ink-soft)]">
-                    {note.publishedAt ? formatDate(note.publishedAt, "yyyy-MM-dd HH:mm") : "Not published"}
+                    {note.publishedAt ? formatDate(note.publishedAt, "yyyy-MM-dd HH:mm") : "未发布"}
                   </p>
                 </Link>
               ))
             ) : (
               <div className="rounded-[1.4rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.45)] px-4 py-5 text-sm text-[var(--ink-soft)]">
-                No notes linked yet.
+                还没有关联笔记。
               </div>
             )}
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-serif text-2xl font-semibold tracking-tight">Digests</h3>
+            <h3 className="font-serif text-2xl font-semibold tracking-tight">摘要</h3>
             {series.weeklyDigests.length ? (
               series.weeklyDigests.map((digest) => (
                 <Link
@@ -140,7 +141,7 @@ export default async function EditSeriesPage({
                     <ArrowUpRight className="h-4 w-4 text-[var(--accent-strong)]" />
                   </div>
                   <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-                    Order {digest.seriesOrder ?? "N/A"}
+                    顺序 {digest.seriesOrder ?? "未设置"}
                   </p>
                   <p className="mt-2 text-sm text-[var(--ink-soft)]">
                     {formatDate(digest.publishedAt, "yyyy-MM-dd HH:mm")}
@@ -149,7 +150,7 @@ export default async function EditSeriesPage({
               ))
             ) : (
               <div className="rounded-[1.4rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.45)] px-4 py-5 text-sm text-[var(--ink-soft)]">
-                No digests linked yet.
+                还没有关联摘要。
               </div>
             )}
           </div>

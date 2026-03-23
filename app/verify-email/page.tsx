@@ -15,43 +15,43 @@ function getStatusContent(status: VerifyEmailStatus | undefined) {
     case "verified":
       return {
         tone: "success" as const,
-        title: "Email verified",
-        message: "Your email has been confirmed and you are now signed in.",
+        title: "邮箱已验证",
+        message: "你的邮箱已经完成验证，现在已自动登录。",
         icon: CheckCircle2,
       };
     case "already-verified":
       return {
         tone: "success" as const,
-        title: "Already verified",
-        message: "This verification link has already been used. If the account is active, you are now signed in.",
+        title: "已完成验证",
+        message: "这个验证链接已经使用过。如果账号处于可用状态，你现在已经登录。",
         icon: CheckCircle2,
       };
     case "verified-restricted":
       return {
         tone: "warning" as const,
-        title: "Email confirmed",
-        message: "The email is verified, but the account is not currently allowed to sign in. Please contact the site admin if you need help.",
+        title: "邮箱已确认",
+        message: "邮箱已经验证成功，但这个账号当前不允许登录。如需帮助，请联系站点管理员。",
         icon: MailCheck,
       };
     case "expired":
       return {
         tone: "warning" as const,
-        title: "Link expired",
-        message: "This verification link has expired. Sign in again to request a fresh one.",
+        title: "链接已过期",
+        message: "这个验证链接已经过期，请重新登录后申请新的链接。",
         icon: CircleAlert,
       };
     case "invalid":
       return {
         tone: "error" as const,
-        title: "Invalid link",
-        message: "This verification link is invalid or has already been consumed.",
+        title: "链接无效",
+        message: "这个验证链接无效，或者已经被使用过。",
         icon: CircleAlert,
       };
     default:
       return {
         tone: "info" as const,
-        title: "Verify your email",
-        message: "Open the verification link from your inbox to activate your reader account.",
+        title: "验证你的邮箱",
+        message: "请打开收件箱中的验证链接，以激活你的读者账号。",
         icon: MailCheck,
       };
   }
@@ -76,28 +76,30 @@ export default async function VerifyEmailPage({
           : "border-black/8 bg-white/72 text-[var(--ink-soft)]";
 
   return (
-    <div className="container-shell grid min-h-[calc(100vh-9rem)] place-items-center py-16">
-      <section className="w-full max-w-2xl rounded-[2.2rem] border border-black/8 bg-white/84 p-8 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
-        <div className={`rounded-[1.6rem] border px-5 py-4 ${feedbackClassName}`}>
-          <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5" />
-            <p className="text-sm font-semibold uppercase tracking-[0.18em]">Email</p>
+    <div className="container-shell py-16">
+      <div className="editorial-shell">
+        <section className="mx-auto w-full max-w-2xl space-y-6">
+          <div className={`rounded-[1.6rem] border px-5 py-4 ${feedbackClassName}`}>
+            <div className="flex items-center gap-3">
+              <Icon className="h-5 w-5" />
+              <p className="text-sm font-semibold uppercase tracking-[0.18em]">邮箱</p>
+            </div>
+            <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-[var(--ink)]">
+              {content.title}
+            </h1>
+            <p className="mt-3 text-sm leading-7">{content.message}</p>
           </div>
-          <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-[var(--ink)]">
-            {content.title}
-          </h1>
-          <p className="mt-3 text-sm leading-7">{content.message}</p>
-        </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/" className="btn-primary">
-            Go to homepage
-          </Link>
-          <Link href="/login" className="btn-secondary">
-            Go to login
-          </Link>
-        </div>
-      </section>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/" className="btn-primary">
+              前往首页
+            </Link>
+            <Link href="/login" className="btn-secondary">
+              前往登录
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

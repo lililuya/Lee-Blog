@@ -7,10 +7,10 @@ export default function NewProviderPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="section-kicker">Providers</p>
-        <h1 className="font-serif text-4xl font-semibold tracking-tight">Create LLM Provider</h1>
+        <p className="section-kicker">提供方</p>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight">新建 LLM 提供方</h1>
       </div>
-      <ProviderForm action={createProviderAction} submitLabel="Create Provider" />
+      <ProviderForm action={createProviderAction} submitLabel="创建提供方" />
     </div>
   );
 }

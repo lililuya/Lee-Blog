@@ -10,9 +10,11 @@ This document is the English companion to the Chinese content refresh guide and 
 | Admin-edited database content | `/admin/*` | Click save | Usually yes | No |
 | Markdown content | `content/blog`, `content/notes`, `content/journal` | `npm run content:sync` or `npm run content:watch` | Yes | No |
 | Prisma schema | `prisma/schema.prisma` | `npm run db:push` | Yes | Recommended |
-| Seed data or admin env values | `prisma/seed.ts`, `.env` | `npm run db:seed` | Maybe | Sometimes |
+| Bootstrap admin or add optional demo content | `prisma/seed.ts`, `.env` | `npm run db:bootstrap` or `npm run db:seed:demo` | Maybe | Sometimes |
 | Environment variables | `.env` | Restart app | Yes | Required |
 | RAG knowledge after large content changes | site content + RAG settings | `npm run rag:sync` | Recommended | No |
+
+Changing `ADMIN_*` values after bootstrap does not rewrite existing records. Update the live admin/profile manually if you need to change them on an existing database.
 
 ## 2. Recommended maintenance patterns
 

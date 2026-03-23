@@ -3,6 +3,7 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { generateChatReply } from "@/lib/chat/orchestrator";
+import { getSiteProfile } from "@/lib/queries";
 
 export const runtime = "nodejs";
 
@@ -39,14 +40,17 @@ export async function POST(request: Request) {
 
     if (!currentUser) {
       return NextResponse.json(
-        { ok: false, error: "Please sign in before using the chat widget." },
+        { ok: false, error: "请先登录后再使用站内助手。" },
         { status: 401 },
       );
     }
 
-    if (currentUser.role !== UserRole.ADMIN) {
+    const siteProfile = await getSiteProfile();
+    const chatEnabledForReaders = Boolean(siteProfile.chatEnabledForReaders);
+
+    if (currentUser.role !== UserRole.ADMIN && !chatEnabledForReaders) {
       return NextResponse.json(
-        { ok: false, error: "The chat widget is available to admin accounts only." },
+        { ok: false, error: "当前站内对话尚未向普通用户开放。" },
         { status: 403 },
       );
     }

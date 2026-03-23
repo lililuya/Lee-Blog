@@ -1,8 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { UserRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,44 +10,18 @@ import { changePasswordWithCredentials } from "@/lib/auth-service";
 import { prisma } from "@/lib/prisma";
 import { generateTwoFactorSecret, verifyTwoFactorToken } from "@/lib/two-factor";
 import { isDatabaseConfigured } from "@/lib/utils";
+import { deleteMediaAsset, storeMediaBufferUpload } from "@/lib/media-storage";
 import {
   commentNotificationSettingsSchema,
   disableTwoFactorSchema,
   twoFactorTokenSchema,
 } from "@/lib/validators";
 import { avatarMaxUploadBytes } from "@/lib/upload-config";
-
-const AVATAR_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
-const AVATAR_URL_PREFIX = "/uploads/avatars/";
 const AVATAR_EXTENSIONS: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
 };
-
-function getLocalAvatarDiskPath(avatarUrl: string | null | undefined) {
-  if (!avatarUrl || !avatarUrl.startsWith(AVATAR_URL_PREFIX)) {
-    return null;
-  }
-
-  const relativePath = avatarUrl.slice(AVATAR_URL_PREFIX.length);
-
-  if (!relativePath || relativePath.includes("..")) {
-    return null;
-  }
-
-  return path.join(AVATAR_DIR, relativePath);
-}
-
-async function deleteLocalAvatar(avatarUrl: string | null | undefined) {
-  const diskPath = getLocalAvatarDiskPath(avatarUrl);
-
-  if (!diskPath) {
-    return;
-  }
-
-  await unlink(diskPath).catch(() => null);
-}
 
 function ensureAccountStorageAvailable() {
   if (!isDatabaseConfigured()) {
@@ -118,26 +89,25 @@ export async function uploadAvatarAction(formData: FormData) {
     select: { avatarUrl: true },
   });
 
-  await mkdir(AVATAR_DIR, { recursive: true });
-
-  const nextFileName = `${user.id}-${Date.now()}-${randomUUID()}${extension}`;
-  const nextAvatarUrl = `${AVATAR_URL_PREFIX}${nextFileName}`;
-  const nextAvatarPath = path.join(AVATAR_DIR, nextFileName);
-  const fileBuffer = Buffer.from(await avatar.arrayBuffer());
-
-  await writeFile(nextAvatarPath, fileBuffer);
+  const uploadedAvatar = await storeMediaBufferUpload({
+    buffer: Buffer.from(await avatar.arrayBuffer()),
+    contentType: avatar.type,
+    directory: "avatars",
+    extension,
+    fileNamePrefix: user.id,
+  });
 
   try {
     await prisma.user.update({
       where: { id: user.id },
-      data: { avatarUrl: nextAvatarUrl },
+      data: { avatarUrl: uploadedAvatar.url },
     });
   } catch (error) {
-    await unlink(nextAvatarPath).catch(() => null);
+    await deleteMediaAsset(uploadedAvatar);
     throw error;
   }
 
-  await deleteLocalAvatar(previousUser?.avatarUrl);
+  await deleteMediaAsset(previousUser?.avatarUrl);
 
   revalidateAvatarSurfaces();
   redirect("/account?saved=1");
@@ -161,7 +131,7 @@ export async function removeAvatarAction() {
     data: { avatarUrl: null },
   });
 
-  await deleteLocalAvatar(previousUser.avatarUrl);
+  await deleteMediaAsset(previousUser.avatarUrl);
 
   revalidateAvatarSurfaces();
   redirect("/account?removed=1");
@@ -288,7 +258,7 @@ export async function confirmTwoFactorSetupAction(formData: FormData) {
     prisma.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_2FA_ENABLED,
-        summary: `Enabled 2FA for ${user.email}.`,
+        summary: `已为 ${user.email} 启用 2FA。`,
         actorId: user.id,
         targetUserId: user.id,
         metadata: {
@@ -355,7 +325,7 @@ export async function disableTwoFactorAction(formData: FormData) {
     prisma.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_2FA_DISABLED,
-        summary: `Disabled 2FA for ${user.email}.`,
+        summary: `已为 ${user.email} 关闭 2FA。`,
         actorId: user.id,
         targetUserId: user.id,
         metadata: {

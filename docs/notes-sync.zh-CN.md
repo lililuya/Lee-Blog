@@ -237,7 +237,8 @@ Markdown 导入时的作者行为：
 这意味着：
 
 - 数据库里必须先有管理员账号
-- 新项目初始化时建议先执行 `npm run db:seed`
+- 新项目初始化时建议先执行 `npm run db:bootstrap`
+- 只有明确需要本地演示内容时，才执行 `npm run db:seed:demo`
 
 ## 13. 常见问题排查
 
@@ -271,7 +272,7 @@ Markdown 导入时的作者行为：
 执行：
 
 ```bash
-npm run db:seed
+npm run db:bootstrap
 ```
 
 ## 14. 推荐的笔记分类方式
