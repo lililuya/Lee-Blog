@@ -110,6 +110,7 @@
 ### 内容管理
 
 - 文章 CRUD
+- 文章分类统一命名与合并工具
 - Notes CRUD
 - Journal CRUD
 - Gallery CRUD

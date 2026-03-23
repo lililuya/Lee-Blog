@@ -83,7 +83,7 @@ export async function getFeedPayload(): Promise<FeedPayload> {
     })),
     ...journalEntries.map((entry) => ({
       id: `journal-${entry.id}`,
-      url: absoluteUrl("/journal"),
+      url: absoluteUrl(`/journal/${entry.slug}`),
       title: `Journal | ${entry.title}`,
       summary: entry.summary,
       content: entry.content,

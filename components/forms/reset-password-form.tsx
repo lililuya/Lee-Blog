@@ -42,7 +42,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         if (!response.ok || !data.ok) {
           setFeedback({
             tone: "error",
-            message: data.error ?? "Could not reset the password.",
+            message: data.error ?? "无法重置密码。",
           });
           return;
         }
@@ -50,12 +50,12 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         form.reset();
         setFeedback({
           tone: "success",
-          message: "Password updated. You can now sign in with your new password.",
+          message: "密码已更新，现在可以使用新密码登录。",
         });
       } catch {
         setFeedback({
           tone: "error",
-          message: "Could not reset the password. Please try again.",
+          message: "无法重置密码，请稍后再试。",
         });
       }
     });
@@ -64,10 +64,10 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+      className="editorial-form-shell space-y-5 md:p-7"
     >
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--ink)]">New password</span>
+        <span className="text-sm font-semibold text-[var(--ink)]">新密码</span>
         <input
           name="password"
           type="password"
@@ -75,12 +75,12 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           minLength={8}
           autoComplete="new-password"
           className="field"
-          placeholder="At least 8 characters"
+          placeholder="至少 8 位字符"
         />
       </label>
 
       <label className="block space-y-2">
-        <span className="text-sm font-semibold text-[var(--ink)]">Confirm new password</span>
+        <span className="text-sm font-semibold text-[var(--ink)]">确认新密码</span>
         <input
           name="confirmPassword"
           type="password"
@@ -88,7 +88,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           minLength={8}
           autoComplete="new-password"
           className="field"
-          placeholder="Repeat the new password"
+          placeholder="再次输入新密码"
         />
       </label>
 
@@ -103,7 +103,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
           <p>{feedback.message}</p>
           {feedback.tone === "success" ? (
             <Link href="/login" className="mt-2 inline-flex font-semibold text-[var(--accent-strong)]">
-              Go to sign in
+              前往登录
             </Link>
           ) : null}
         </div>
@@ -115,7 +115,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         disabled={isPending}
       >
         {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        Reset password
+        重置密码
       </button>
     </form>
   );

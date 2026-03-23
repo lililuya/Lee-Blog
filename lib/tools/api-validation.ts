@@ -2,6 +2,7 @@ import "server-only";
 
 import { ProviderAdapter } from "@prisma/client";
 import { debugFunAsrTranscription, transcribeAudioWithOpenAiCompatibleDetailed } from "@/lib/chat/transcription";
+import { validateObjectStorageConnection } from "@/lib/media-storage";
 
 type ChatValidationInput = {
   adapter: ProviderAdapter;
@@ -236,4 +237,8 @@ export async function validateSpeechApiRequest(input: SpeechValidationInput) {
   }
 
   throw new Error("Unsupported speech validation provider.");
+}
+
+export async function validateObjectStorageRequest() {
+  return validateObjectStorageConnection();
 }

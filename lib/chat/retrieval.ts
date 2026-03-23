@@ -19,6 +19,7 @@ import {
   publicWeeklyDigestWhere,
 } from "@/lib/content-visibility";
 import { getNoteBySlug, getPostBySlug, getWeeklyDigestBySlug } from "@/lib/queries";
+import { recordRagQueryEvent } from "@/lib/rag-quality";
 import { getContentStats, isDatabaseConfigured } from "@/lib/utils";
 import { getChatMessageText, hasChatAttachments, type ChatMessage } from "@/lib/chat/message";
 import { retrieveSemanticCandidates } from "@/lib/chat/semantic";
@@ -322,7 +323,7 @@ function retrievePublicCandidatesFromDemo(query: string) {
         buildSource({
           id: `journal-${entry.id}`,
           title: entry.title,
-          href: "/journal",
+          href: `/journal/${entry.slug}`,
           kindLabel: "Journal entry",
           visibility: "public",
           query,
@@ -455,6 +456,7 @@ async function retrievePublicCandidates(query: string) {
       select: {
         id: true,
         title: true,
+        slug: true,
         summary: true,
         content: true,
         mood: true,
@@ -550,7 +552,7 @@ async function retrievePublicCandidates(query: string) {
       buildSource({
         id: `journal-${entry.id}`,
         title: entry.title,
-        href: "/journal",
+        href: `/journal/${entry.slug}`,
         kindLabel: "Journal entry",
         visibility: "public",
         query,
@@ -739,6 +741,20 @@ export async function retrieveChatContext(input: {
       (value): value is RetrievedChatSource => Boolean(value),
     ),
   ).slice(0, 6);
+
+  await recordRagQueryEvent({
+    query,
+    mode: "CHAT",
+    pathname: input.pathname,
+    usedPageContext: Boolean(currentPageSource),
+    sources: sources.map((source) => ({
+      title: source.title,
+      href: source.href,
+      kindLabel: source.kindLabel,
+      visibility: source.visibility,
+      score: source.score,
+    })),
+  });
 
   return {
     query,

@@ -236,7 +236,8 @@ Author behavior during Markdown sync:
 That means:
 
 - at least one admin must exist before sync runs
-- run `npm run db:seed` first if the database is new
+- run `npm run db:bootstrap` first if the database is new
+- run `npm run db:seed:demo` only if you explicitly want local sample content
 
 ## 13. Common problems
 
@@ -270,7 +271,7 @@ Check:
 Run:
 
 ```bash
-npm run db:seed
+npm run db:bootstrap
 ```
 
 ## 14. Recommended note taxonomy

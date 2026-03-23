@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { deleteMediaAsset, storeMediaBufferUpload, type StoredMediaAsset } from "@/lib/media-storage";
 import {
   siteImageMaxUploadBytes,
   siteImageMaxUploadLabel,
@@ -11,8 +13,6 @@ import {
   siteVideoTargetBitrateKbps,
 } from "@/lib/upload-config";
 
-const SITE_ASSET_DIR = path.join(process.cwd(), "public", "uploads", "site");
-const SITE_ASSET_URL_PREFIX = "/uploads/site/";
 const FFMPEG_BINARY = process.env.FFMPEG_PATH?.trim() || "ffmpeg";
 const FFMPEG_TIMEOUT_MS = 2 * 60 * 1000;
 const execFileAsync = promisify(execFile);
@@ -57,28 +57,8 @@ export class SiteAssetUploadError extends Error {
   }
 }
 
-function getLocalSiteAssetPath(assetUrl: string | null | undefined) {
-  if (!assetUrl || !assetUrl.startsWith(SITE_ASSET_URL_PREFIX)) {
-    return null;
-  }
-
-  const relativePath = assetUrl.slice(SITE_ASSET_URL_PREFIX.length);
-
-  if (!relativePath || relativePath.includes("..")) {
-    return null;
-  }
-
-  return path.join(SITE_ASSET_DIR, relativePath);
-}
-
-export async function deleteLocalSiteAsset(assetUrl: string | null | undefined) {
-  const diskPath = getLocalSiteAssetPath(assetUrl);
-
-  if (!diskPath) {
-    return;
-  }
-
-  await unlink(diskPath).catch(() => null);
+export async function deleteSiteAsset(asset: StoredMediaAsset | string | null | undefined) {
+  await deleteMediaAsset(asset);
 }
 
 function resolveSiteAssetExtension(
@@ -166,7 +146,7 @@ async function storeRawSiteAssetUpload(
     invalidTypeCode: SiteAssetUploadErrorCode;
     invalidTypeMessage: string;
   },
-) {
+) : Promise<StoredMediaAsset> {
   if (file.size === 0) {
     throw new Error("The uploaded file is empty.");
   }
@@ -188,17 +168,13 @@ async function storeRawSiteAssetUpload(
     throw new SiteAssetUploadError(options.invalidTypeCode, options.invalidTypeMessage);
   }
 
-  await mkdir(SITE_ASSET_DIR, { recursive: true });
-
-  const fileName = createSiteAssetFileName(prefix, extension);
-  const diskPath = path.join(SITE_ASSET_DIR, fileName);
-
-  await writeUploadedFileToDisk(file, diskPath);
-
-  return {
-    diskPath,
-    url: `${SITE_ASSET_URL_PREFIX}${fileName}`,
-  };
+  return storeMediaBufferUpload({
+    buffer: Buffer.from(await file.arrayBuffer()),
+    contentType: file.type,
+    directory: "site",
+    extension,
+    fileNamePrefix: prefix,
+  });
 }
 
 export async function storeSiteImageUpload(file: File, prefix: string) {
@@ -238,24 +214,24 @@ export async function storeSiteVideoUpload(file: File, prefix: string) {
     );
   }
 
-  await mkdir(SITE_ASSET_DIR, { recursive: true });
-
-  const tempInputFileName = createSiteAssetFileName(`${prefix}-source`, inputExtension);
-  const outputFileName = createSiteAssetFileName(prefix, ".mp4");
-  const tempInputPath = path.join(SITE_ASSET_DIR, tempInputFileName);
-  const outputPath = path.join(SITE_ASSET_DIR, outputFileName);
+  const tempDirectory = await mkdtemp(path.join(tmpdir(), "site-assets-"));
+  const tempInputPath = path.join(
+    tempDirectory,
+    createSiteAssetFileName(`${prefix}-source`, inputExtension),
+  );
+  const outputPath = path.join(tempDirectory, createSiteAssetFileName(prefix, ".mp4"));
 
   try {
     await writeUploadedFileToDisk(file, tempInputPath);
     await transcodeVideoToMp4(tempInputPath, outputPath);
-
-    return {
-      diskPath: outputPath,
-      url: `${SITE_ASSET_URL_PREFIX}${outputFileName}`,
-    };
+    return storeMediaBufferUpload({
+      buffer: await readFile(outputPath),
+      contentType: "video/mp4",
+      directory: "site",
+      extension: ".mp4",
+      fileNamePrefix: prefix,
+    });
   } catch (error) {
-    await unlink(outputPath).catch(() => null);
-
     if (error instanceof SiteAssetUploadError) {
       throw error;
     }
@@ -267,5 +243,11 @@ export async function storeSiteVideoUpload(file: File, prefix: string) {
     );
   } finally {
     await unlink(tempInputPath).catch(() => null);
+    await unlink(outputPath).catch(() => null);
+    await rm(tempDirectory, { recursive: true, force: true }).catch(() => null);
   }
+}
+
+export async function deleteLocalSiteAsset(asset: StoredMediaAsset | string | null | undefined) {
+  await deleteSiteAsset(asset);
 }

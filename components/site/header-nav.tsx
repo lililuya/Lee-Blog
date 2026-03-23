@@ -37,19 +37,18 @@ type NavItem = {
 };
 
 const baseItems = [
-  { href: "/", label: "Home", icon: Sparkles },
-  { href: "/blog", label: "Blog", icon: BookOpenText },
-  { href: "/series", label: "Series", icon: Layers3 },
-  { href: "/gallery", label: "Gallery", icon: Images },
-  { href: "/archive", label: "Archive", icon: Archive },
-  { href: "/notes", label: "Notes", icon: NotebookPen },
-  { href: "/journal", label: "Journal", icon: PenSquare },
-  { href: "/papers", label: "Papers", icon: FileSearch },
-  { href: "/digest", label: "Digest", icon: ScrollText },
-  { href: "/search", label: "Search", icon: Search },
+  { href: "/", label: "首页", icon: Sparkles },
+  { href: "/blog", label: "文章", icon: BookOpenText },
+  { href: "/series", label: "专题", icon: Layers3 },
+  { href: "/gallery", label: "图集", icon: Images },
+  { href: "/archive", label: "归档", icon: Archive },
+  { href: "/notes", label: "笔记", icon: NotebookPen },
+  { href: "/journal", label: "日志", icon: PenSquare },
+  { href: "/papers", label: "论文", icon: FileSearch },
+  { href: "/digest", label: "周报", icon: ScrollText },
+  { href: "/tools", label: "工具", icon: Wrench },
+  { href: "/search", label: "搜索", icon: Search },
 ] as const;
-
-const adminItems = [{ href: "/tools", label: "Tools", icon: Wrench }] as const;
 
 function isActive(pathname: string, href: string) {
   if (href === "/") {
@@ -69,7 +68,7 @@ export function HeaderNav({
   mode = "all",
 }: HeaderNavProps) {
   const pathname = usePathname();
-  const items: NavItem[] = [...baseItems, ...(isAdmin ? adminItems : [])];
+  const items: NavItem[] = [...baseItems];
 
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -80,7 +79,7 @@ export function HeaderNav({
       {mode !== "mobile" ? (
         <div className="site-side-rail hidden min-[1400px]:flex">
           <div className="site-side-rail__scroll-shell">
-            <nav className="site-side-rail__nav" aria-label="Primary">
+            <nav className="site-side-rail__nav" aria-label="主导航">
               {items.map(({ href, label, icon: Icon }) => {
                 const active = isActive(pathname, href);
 
@@ -104,35 +103,40 @@ export function HeaderNav({
           </div>
 
           <div className="site-side-rail__utility-dock">
-            <div className="site-side-rail__tools" role="group" aria-label="Quick actions">
+            <div className="site-side-rail__tools" role="group" aria-label="快捷操作">
               {isAdmin ? (
                 <Link
                   href="/admin"
-                  className={cn("site-side-rail__tool", isActive(pathname, "/admin") && "site-side-rail__tool--active")}
-                  aria-label="Admin Console"
-                  title="Admin Console"
+                  className={cn(
+                    "site-side-rail__tool",
+                    isActive(pathname, "/admin") && "site-side-rail__tool--active",
+                  )}
+                  aria-label="管理后台"
+                  title="管理后台"
                 >
                   <span className="site-side-rail__tool-icon" aria-hidden="true">
                     <LayoutDashboard className="h-4 w-4" />
                   </span>
-                  <span className="site-side-rail__tool-label">Admin Console</span>
+                  <span className="site-side-rail__tool-label">管理后台</span>
                 </Link>
               ) : null}
+
               {isSignedIn ? (
                 <form action={logoutAction}>
                   <button
                     type="submit"
                     className="site-side-rail__tool"
-                    aria-label="Sign out"
-                    title="Sign out"
+                    aria-label="退出登录"
+                    title="退出登录"
                   >
                     <span className="site-side-rail__tool-icon" aria-hidden="true">
                       <LogOut className="h-4 w-4" />
                     </span>
-                    <span className="site-side-rail__tool-label">Sign Out</span>
+                    <span className="site-side-rail__tool-label">退出登录</span>
                   </button>
                 </form>
               ) : null}
+
               <ThemeToggle variant="rail" />
             </div>
 
@@ -140,20 +144,20 @@ export function HeaderNav({
               type="button"
               className="site-side-rail__backtop"
               onClick={scrollToTop}
-              aria-label="Scroll to top"
-              title="Scroll to top"
+              aria-label="回到顶部"
+              title="回到顶部"
             >
               <span className="site-side-rail__tool-icon" aria-hidden="true">
                 <ArrowUp className="h-4 w-4" />
               </span>
-              <span className="site-side-rail__tool-label">Top</span>
+              <span className="site-side-rail__tool-label">顶部</span>
             </button>
           </div>
         </div>
       ) : null}
 
       {mode !== "desktop" ? (
-        <nav className="mt-4 flex items-center gap-2 overflow-x-auto pb-1 min-[1400px]:hidden">
+        <nav className="mt-4 flex snap-x snap-mandatory items-center gap-2 overflow-x-auto pb-1 min-[1400px]:hidden">
           {items.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
 
@@ -174,11 +178,11 @@ export function HeaderNav({
 
           {isSignedIn ? (
             <form action={logoutAction}>
-              <button type="submit" className="site-nav-chip" aria-label="Sign out">
+              <button type="submit" className="site-nav-chip" aria-label="退出登录">
                 <span className="site-nav-chip__icon">
                   <LogOut className="h-4 w-4" />
                 </span>
-                Sign Out
+                退出登录
               </button>
             </form>
           ) : null}

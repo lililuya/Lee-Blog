@@ -379,7 +379,9 @@ npm run db:generate
 npm run db:push
 npm run db:migrate
 npm run db:studio
+npm run db:bootstrap
 npm run db:seed
+npm run db:seed:demo
 ```
 
 说明：
@@ -388,7 +390,9 @@ npm run db:seed
 - `db:push`：把 Prisma schema 推到数据库
 - `db:migrate`：开发态迁移命令
 - `db:studio`：打开 Prisma Studio
-- `db:seed`：初始化默认数据和管理员账号
+- `db:bootstrap`：安全补齐缺失的管理员账号和站点基础资料
+- `db:seed`：`db:bootstrap` 的兼容别名，默认不会覆盖现有管理员或站点资料
+- `db:seed:demo`：显式写入本地演示内容
 
 ### 7.5 内容与研究流
 
@@ -444,12 +448,18 @@ npm run db:push
 npm run dev
 ```
 
-### 8.4 改默认管理员账号或种子数据
+### 8.4 初始化管理员或写入演示数据
 
 你通常需要：
 
 ```bash
-npm run db:seed
+npm run db:bootstrap
+```
+
+如果你明确需要本地演示内容，再执行：
+
+```bash
+npm run db:seed:demo
 ```
 
 ### 8.5 改 `.env`

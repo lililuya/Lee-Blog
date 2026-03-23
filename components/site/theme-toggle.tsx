@@ -39,7 +39,7 @@ function getServerSnapshot(): ThemeMode {
 export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const isDark = theme === "dark";
-  const title = isDark ? "Switch to light mode" : "Switch to dark mode";
+  const title = isDark ? "切换到浅色模式" : "切换到深色模式";
 
   function toggleTheme() {
     const nextTheme: ThemeMode = isDark ? "light" : "dark";
@@ -59,7 +59,7 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
         <span className="site-side-rail__tool-icon" aria-hidden="true">
           {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
         </span>
-        <span className="site-side-rail__tool-label">{isDark ? "Light" : "Night"}</span>
+        <span className="site-side-rail__tool-label">{isDark ? "浅色" : "深色"}</span>
       </button>
     );
   }
@@ -76,7 +76,7 @@ export function ThemeToggle({ variant = "default" }: ThemeToggleProps) {
       <span className="theme-toggle__icon" aria-hidden="true">
         {isDark ? <SunMedium className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
       </span>
-      <span className="hidden sm:inline">{isDark ? "Light" : "Night"}</span>
+      <span className="hidden sm:inline">{isDark ? "浅色" : "深色"}</span>
     </button>
   );
 }

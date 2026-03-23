@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import {
   validateChatApiRequest,
+  validateObjectStorageRequest,
   validateSpeechApiRequest,
 } from "@/lib/tools/api-validation";
 
@@ -87,6 +88,11 @@ export async function POST(request: Request) {
         { ok: false, error: "Validation kind is required." },
         { status: 400 },
       );
+    }
+
+    if (kind === "object-storage") {
+      const result = await validateObjectStorageRequest();
+      return NextResponse.json({ ok: true, result });
     }
 
     if (kind === "llm-openai-compatible" || kind === "llm-anthropic") {

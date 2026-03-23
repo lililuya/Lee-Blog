@@ -6,6 +6,7 @@ import {
   getDefaultChatTranscriptionProviderId,
   transcribeAudioWithConfiguredProvider,
 } from "@/lib/chat/transcription";
+import { getSiteProfile } from "@/lib/queries";
 
 export const runtime = "nodejs";
 
@@ -30,14 +31,17 @@ export async function POST(request: Request) {
 
     if (!currentUser) {
       return NextResponse.json(
-        { ok: false, error: "Please sign in before using voice transcription." },
+        { ok: false, error: "请先登录后再使用语音转写。" },
         { status: 401 },
       );
     }
 
-    if (currentUser.role !== UserRole.ADMIN) {
+    const siteProfile = await getSiteProfile();
+    const chatEnabledForReaders = Boolean(siteProfile.chatEnabledForReaders);
+
+    if (currentUser.role !== UserRole.ADMIN && !chatEnabledForReaders) {
       return NextResponse.json(
-        { ok: false, error: "Voice transcription in chat is available to admin accounts only." },
+        { ok: false, error: "当前站内语音转写尚未向普通用户开放。" },
         { status: 403 },
       );
     }

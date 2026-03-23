@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Manrope, Newsreader } from "next/font/google";
 import "./globals.css";
@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site/site-header";
 import { VisitTracker } from "@/components/site/visit-tracker";
 import { getCurrentUser } from "@/lib/auth";
 import { getAvailableChatTranscriptionProviders } from "@/lib/chat/transcription";
+import { buildOgImageUrl } from "@/lib/content-seo";
 import { getEnabledChatProviders, getSiteProfile, isAdminUser } from "@/lib/queries";
 import { getUnreadNotificationCount } from "@/lib/user-notifications";
 
@@ -68,12 +69,63 @@ function getSiteBackgroundOverlayStyle(opacity: number | null | undefined) {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
+  applicationName: "Lee Blog",
   title: {
     default: "Lee Blog",
     template: "%s | Lee Blog",
   },
   description:
-    "A full-stack personal academic blog with journal, comments, admin dashboard, and configurable multi-LLM chat entry.",
+    "A personal academic blog for essays, evergreen notes, weekly digests, galleries, and moderated public discussion.",
+  alternates: {
+    canonical: "/",
+  },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/globe.svg", type: "image/svg+xml" }],
+    shortcut: ["/globe.svg"],
+  },
+  openGraph: {
+    type: "website",
+    url: "/",
+    title: "Lee Blog",
+    description:
+      "A personal academic blog for essays, evergreen notes, weekly digests, galleries, and moderated public discussion.",
+    siteName: "Lee Blog",
+    images: [
+      {
+        url: buildOgImageUrl({
+          title: "Lee Blog",
+          description:
+            "A personal academic blog for essays, evergreen notes, weekly digests, galleries, and moderated public discussion.",
+          eyebrow: "Lee Blog",
+        }),
+        alt: "Lee Blog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lee Blog",
+    description:
+      "A personal academic blog for essays, evergreen notes, weekly digests, galleries, and moderated public discussion.",
+    images: [
+      buildOgImageUrl({
+        title: "Lee Blog",
+        description:
+          "A personal academic blog for essays, evergreen notes, weekly digests, galleries, and moderated public discussion.",
+        eyebrow: "Lee Blog",
+      }),
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4efe7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1720" },
+  ],
 };
 
 export default async function RootLayout({
@@ -83,9 +135,12 @@ export default async function RootLayout({
 }>) {
   const [currentUser, siteProfile] = await Promise.all([getCurrentUser(), getSiteProfile()]);
   const adminMode = isAdminUser(currentUser?.role);
+  const readerChatEnabled = Boolean(siteProfile.chatEnabledForReaders);
+  const canCurrentUserUseChat = adminMode || (Boolean(currentUser) && readerChatEnabled);
+  const shouldRenderChatWidget = adminMode || readerChatEnabled;
   const [providers, transcriptionProviders, unreadNotificationCount] = await Promise.all([
-    adminMode ? getEnabledChatProviders() : Promise.resolve([]),
-    adminMode
+    canCurrentUserUseChat ? getEnabledChatProviders() : Promise.resolve([]),
+    canCurrentUserUseChat
       ? Promise.resolve(getAvailableChatTranscriptionProviders())
       : Promise.resolve([]),
     currentUser ? getUnreadNotificationCount(currentUser.id) : Promise.resolve(0),
@@ -136,20 +191,23 @@ export default async function RootLayout({
           <main>{children}</main>
           <VisitTracker />
           <SiteFooter />
-          <ChatWidget
-            currentUser={
-              currentUser
-                ? {
-                    name: currentUser.name,
-                    role: currentUser.role,
-                    avatarUrl: currentUser.avatarUrl,
-                  }
-                : null
-            }
-            assistantAvatarUrl={siteProfile.assistantAvatarUrl}
-            providers={providers}
-            transcriptionProviders={transcriptionProviders}
-          />
+          {shouldRenderChatWidget ? (
+            <ChatWidget
+              currentUser={
+                currentUser
+                  ? {
+                      name: currentUser.name,
+                      role: currentUser.role,
+                      avatarUrl: currentUser.avatarUrl,
+                    }
+                  : null
+              }
+              assistantAvatarUrl={siteProfile.assistantAvatarUrl}
+              providers={providers}
+              transcriptionProviders={transcriptionProviders}
+              readerAccessEnabled={readerChatEnabled}
+            />
+          ) : null}
         </div>
       </body>
     </html>

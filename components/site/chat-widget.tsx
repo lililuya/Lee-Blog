@@ -43,6 +43,7 @@ type TranscriptionProvider = {
 type ChatWidgetProps = {
   providers: ChatProvider[];
   transcriptionProviders: TranscriptionProvider[];
+  readerAccessEnabled: boolean;
   currentUser: {
     name: string;
     role?: string;
@@ -426,6 +427,7 @@ async function createImageAttachment(file: File): Promise<ChatAttachment> {
 export function ChatWidget({
   providers,
   transcriptionProviders,
+  readerAccessEnabled,
   currentUser,
   assistantAvatarUrl,
 }: ChatWidgetProps) {
@@ -456,25 +458,17 @@ export function ChatWidget({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isReplyPending, setIsReplyPending] = useState(false);
   const isAdminUser = currentUser?.role === "ADMIN";
+  const hasUserAccess = isAdminUser || (Boolean(currentUser) && readerAccessEnabled);
 
-  const canChat = isAdminUser && providers.length > 0 && Boolean(selectedProvider);
+  const canChat = hasUserAccess && providers.length > 0 && Boolean(selectedProvider);
   const canTranscribe =
-    isAdminUser && transcriptionProviders.length > 0 && Boolean(selectedTranscriptionProvider);
+    hasUserAccess && transcriptionProviders.length > 0 && Boolean(selectedTranscriptionProvider);
   const loginHref = pathname ? `/login?next=${encodeURIComponent(pathname)}` : "/login";
-  const selectedProviderMeta = useMemo(
-    () => providers.find((provider) => provider.slug === selectedProvider) ?? null,
-    [providers, selectedProvider],
-  );
   const selectedLabel = useMemo(
     () => providers.find((provider) => provider.slug === selectedProvider)?.name ?? "未选择模型",
     [providers, selectedProvider],
   );
   const promptTemplates = useMemo(() => getPromptTemplates(pathname), [pathname]);
-  const selectedTranscriptionMeta = useMemo(
-    () =>
-      transcriptionProviders.find((provider) => provider.id === selectedTranscriptionProvider) ?? null,
-    [selectedTranscriptionProvider, transcriptionProviders],
-  );
   const selectedTranscriptionLabel = useMemo(
     () =>
       transcriptionProviders.find((provider) => provider.id === selectedTranscriptionProvider)?.name ??
@@ -482,6 +476,18 @@ export function ChatWidget({
     [selectedTranscriptionProvider, transcriptionProviders],
   );
   const currentUserAvatarUrl = currentUser?.avatarUrl ?? null;
+  const widgetShellStyle = isFullscreen
+    ? {
+        paddingTop: "max(0.75rem, env(safe-area-inset-top))",
+        paddingRight: "max(0.75rem, env(safe-area-inset-right))",
+        paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
+      }
+    : {
+        paddingRight: "max(0.75rem, env(safe-area-inset-right))",
+        paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
+      };
   const assistantDisplayName = "站内助手";
 
   useEffect(() => {
@@ -815,35 +821,37 @@ export function ChatWidget({
     event.currentTarget.form?.requestSubmit();
   }
 
-  if (!isAdminUser) {
+  if (!isAdminUser && !readerAccessEnabled) {
     return null;
   }
 
   return (
     <div
       className={cn(
-        "fixed z-[70] transition-[bottom] duration-300",
+        "pointer-events-none fixed z-[70] transition-[bottom] duration-300",
         isFullscreen
-          ? "inset-0 p-3 md:p-6"
-          : "right-4 flex flex-col items-end gap-4 md:right-6",
-        !isFullscreen ? "bottom-6" : null,
+          ? "inset-0"
+          : isOpen
+            ? "inset-x-0 bottom-0 flex flex-col items-end gap-3 sm:inset-x-auto sm:right-4 md:right-6"
+            : "right-0 bottom-0 flex flex-col items-end gap-3 sm:right-4 md:right-6",
       )}
+      style={widgetShellStyle}
     >
       {isOpen ? (
         <>
           {isFullscreen ? (
-            <div className="absolute inset-0 bg-[rgba(20,33,43,0.24)] backdrop-blur-[6px]" />
+            <div className="pointer-events-auto absolute inset-0 bg-[rgba(20,33,43,0.24)] backdrop-blur-[6px]" />
           ) : null}
 
           <div
             className={cn(
-              "theme-chat-shell relative flex flex-col overflow-hidden border backdrop-blur-2xl",
+              "pointer-events-auto theme-chat-shell relative flex flex-col overflow-hidden border backdrop-blur-2xl",
               isFullscreen
-                ? "h-full w-full rounded-[2rem] shadow-[0_28px_80px_rgba(20,33,43,0.2)]"
-                : "h-[min(82vh,48rem)] w-[min(96vw,30rem)] rounded-[1.8rem] shadow-[0_32px_70px_rgba(20,33,43,0.14)]",
+                ? "h-full w-full rounded-[1.4rem] shadow-[0_28px_80px_rgba(20,33,43,0.2)] sm:rounded-[2rem]"
+                : "h-[min(88vh,48rem)] w-full rounded-[1.45rem] shadow-[0_32px_70px_rgba(20,33,43,0.14)] sm:w-[min(92vw,30rem)] sm:rounded-[1.8rem]",
             )}
           >
-            <div className="theme-chat-header border-b px-5 py-4">
+            <div className="theme-chat-header border-b px-4 py-4 sm:px-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-semibold text-[var(--accent-strong)]">
@@ -875,27 +883,9 @@ export function ChatWidget({
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-2 text-[0.72rem] font-semibold text-[var(--ink-soft)]">
-                <span className="rounded-full bg-white/70 px-3 py-1">文本问答</span>
-                <span className="rounded-full bg-white/70 px-3 py-1">图片输入</span>
-                <span className="rounded-full bg-white/70 px-3 py-1">
-                  {selectedTranscriptionLabel} 语音转写
-                </span>
-                <span className="rounded-full bg-white/70 px-3 py-1">Markdown 回复</span>
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary px-3 py-2 text-xs"
-                  onClick={resetConversation}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  清除历史
-                </button>
-              </div>
             </div>
 
-            <div className="space-y-3 border-b border-black/6 px-5 py-4">
+            <div className="space-y-3 border-b border-black/6 px-4 py-4 sm:px-5">
               {currentUser ? (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--ink-soft)]">
@@ -942,49 +932,6 @@ export function ChatWidget({
                     )}
                   </select>
                 </label>
-              ) : null}
-
-              {currentUser ? (
-                <div className="rounded-[1.2rem] border border-black/8 bg-[rgba(255,255,255,0.62)] px-4 py-3">
-                  <div className="flex flex-wrap gap-2 text-[0.72rem] font-semibold text-[var(--ink-soft)]">
-                    <span className="rounded-full bg-white/80 px-3 py-1">{providers.length} models ready</span>
-                    <span className="rounded-full bg-white/80 px-3 py-1">
-                      {transcriptionProviders.length} STT ready
-                    </span>
-                    {selectedProviderMeta ? (
-                      <span className="rounded-full bg-white/80 px-3 py-1">
-                        {selectedProviderMeta.adapter}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                    <div className="min-w-0 text-xs leading-6 text-[var(--ink-soft)]">
-                      <div className="font-semibold text-[var(--ink)]">Current setup</div>
-                      <div className="truncate">
-                        Model: {selectedProviderMeta ? `${selectedProviderMeta.name} | ${selectedProviderMeta.model}` : "No model selected"}
-                      </div>
-                      <div className="truncate">
-                        Speech-to-text: {selectedTranscriptionMeta?.name ?? "No STT selected"}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href="/admin/providers"
-                        className="rounded-full border border-black/8 bg-white/80 px-3 py-2 text-xs font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)]"
-                      >
-                        Providers
-                      </Link>
-                      <Link
-                        href="/tools"
-                        className="rounded-full border border-black/8 bg-white/80 px-3 py-2 text-xs font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)]"
-                      >
-                        Validation Lab
-                      </Link>
-                    </div>
-                  </div>
-                </div>
               ) : null}
 
               {!currentUser ? (
@@ -1034,7 +981,7 @@ export function ChatWidget({
                     <button
                       key={template.label}
                       type="button"
-                      className="rounded-full border border-black/8 bg-white/70 px-3 py-2 text-xs leading-5 text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-full border border-black/8 bg-white/70 px-2.5 py-1.5 text-[0.7rem] leading-5 text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => handleTemplateSelect(template)}
                       disabled={isReplyPending}
                     >
@@ -1047,13 +994,13 @@ export function ChatWidget({
 
             <div
               ref={listRef}
-              className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,249,0.9),rgba(243,247,245,0.95))] px-4 py-4 md:px-5"
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,249,0.9),rgba(243,247,245,0.95))] px-3 py-3 sm:px-4 md:px-5"
             >
               {messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
                   className={cn(
-                    "flex items-end gap-3",
+                    "flex items-start gap-2.5 sm:items-end sm:gap-3",
                     message.role === "assistant" ? "justify-start" : "justify-end",
                   )}
                 >
@@ -1062,20 +1009,20 @@ export function ChatWidget({
                       name={assistantDisplayName}
                       src={assistantAvatarUrl}
                       fallbackLabel="AI"
-                      className="h-10 w-10 bg-white/75 text-xs"
+                      className="h-8 w-8 bg-white/75 text-[0.7rem] sm:h-10 sm:w-10 sm:text-xs"
                     />
                   ) : null}
 
                   <div
                     className={cn(
-                      "max-w-[88%] rounded-[1.35rem] px-4 py-3 text-sm leading-7 shadow-[0_8px_18px_rgba(20,33,43,0.05)]",
+                      "max-w-[calc(100%-2.75rem)] rounded-[1.2rem] px-3.5 py-3 text-sm leading-6 shadow-[0_8px_18px_rgba(20,33,43,0.05)] sm:max-w-[88%] sm:rounded-[1.35rem] sm:px-4 sm:leading-7",
                       message.role === "assistant"
                         ? "theme-chat-bubble-assistant"
                         : "theme-chat-bubble-user",
                     )}
                   >
                     {message.attachments?.length ? (
-                      <div className="mb-3 grid grid-cols-2 gap-2">
+                      <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {message.attachments.map((attachment) => (
                           <div
                             key={attachment.id}
@@ -1153,14 +1100,14 @@ export function ChatWidget({
                       name={currentUser?.name}
                       src={currentUserAvatarUrl}
                       fallbackLabel={currentUser?.name ?? "ME"}
-                      className="h-10 w-10 bg-white/75 text-xs"
+                      className="h-8 w-8 bg-white/75 text-[0.7rem] sm:h-10 sm:w-10 sm:text-xs"
                     />
                   ) : null}
                 </div>
               ))}
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3 border-t border-black/6 px-5 py-4">
+            <form onSubmit={handleSubmit} className="space-y-3 border-t border-black/6 px-4 py-4 sm:px-5">
               {error ? (
                 <div className="rounded-2xl bg-rose-50 px-4 py-3 text-xs text-rose-700">{error}</div>
               ) : null}
@@ -1170,7 +1117,7 @@ export function ChatWidget({
                   <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
                     待发送图片
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {pendingAttachments.map((attachment) => (
                       <div
                         key={attachment.id}
@@ -1203,23 +1150,6 @@ export function ChatWidget({
                 </div>
               ) : null}
 
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                onKeyDown={handleTextareaKeyDown}
-                rows={4}
-                className="field resize-none"
-                placeholder={
-                  !currentUser
-                    ? "登录后即可开始聊天。"
-                    : providers.length === 0
-                      ? "当前没有可用模型。"
-                      : "可以直接输入问题，也可以上传图片或点麦克风录音后自动转写..."
-                }
-                disabled={!canChat || isReplyPending || isTranscribing}
-              />
-
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1229,11 +1159,28 @@ export function ChatWidget({
                 onChange={handleImageSelection}
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-[1.45rem] border border-black/8 bg-[rgba(255,255,255,0.78)] px-3 py-3 shadow-[0_14px_32px_rgba(20,33,43,0.05)] sm:rounded-[1.6rem]">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={handleTextareaKeyDown}
+                  rows={4}
+                  className="min-h-[6.25rem] w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[7.5rem] sm:leading-7"
+                  placeholder={
+                    !currentUser
+                      ? "登录后即可开始聊天。"
+                      : providers.length === 0
+                        ? "当前没有可用模型。"
+                        : "可以直接输入问题，也可以上传图片或点麦克风录音后自动转写..."
+                  }
+                  disabled={!canChat || isReplyPending || isTranscribing}
+                />
+
+                <div className="mt-3 flex flex-wrap items-stretch justify-end gap-2 sm:items-center">
                   <button
                     type="button"
-                    className="btn-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white/80 text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={
                       !canChat ||
@@ -1242,45 +1189,66 @@ export function ChatWidget({
                       isTranscribing ||
                       pendingAttachments.length >= MAX_IMAGES_PER_MESSAGE
                     }
+                    aria-label="上传图片"
+                    title="上传图片"
                   >
                     <ImagePlus className="h-4 w-4" />
-                    上传图片
                   </button>
 
                   <button
                     type="button"
                     className={cn(
-                      "btn-secondary px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60",
-                      isRecording ? "border-rose-300 bg-rose-50 text-rose-700" : null,
+                      "inline-flex h-10 items-center justify-center rounded-full border border-black/8 bg-white/80 px-3 text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-60",
+                      !isRecording && !isTranscribing && "w-10 px-0",
+                      isRecording ? "border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:text-rose-700" : null,
                     )}
                     onClick={() => {
                       void handleVoiceToggle();
                     }}
                     disabled={!canTranscribe || isReplyPending || isTranscribing}
+                    aria-label={`语音输入（${selectedTranscriptionLabel}）`}
+                    title={`语音输入（${selectedTranscriptionLabel}）`}
                   >
-                    {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    {isRecording
-                      ? `结束录音 ${formatRecordingTime(recordingSeconds)}`
-                      : isTranscribing
-                        ? "语音转写中..."
-                        : "语音输入"}
+                    {isRecording ? (
+                      <>
+                        <Square className="h-4 w-4" />
+                        <span className="text-xs font-semibold">{formatRecordingTime(recordingSeconds)}</span>
+                      </>
+                    ) : isTranscribing ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        <span className="text-xs font-semibold">转写中</span>
+                      </>
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    onClick={resetConversation}
+                    disabled={messages.length <= 1 || isRecording || isReplyPending || isTranscribing}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    清除历史
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="btn-primary h-10 w-full justify-center px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-28 sm:w-auto"
+                    disabled={
+                      !canChat ||
+                      isRecording ||
+                      isReplyPending ||
+                      isTranscribing ||
+                      (!input.trim() && pendingAttachments.length === 0)
+                    }
+                  >
+                    <SendHorizontal className="h-4 w-4" />
+                    发送消息
                   </button>
                 </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary min-w-32 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={
-                    !canChat ||
-                    isRecording ||
-                    isReplyPending ||
-                    isTranscribing ||
-                    (!input.trim() && pendingAttachments.length === 0)
-                  }
-                >
-                  <SendHorizontal className="h-4 w-4" />
-                  发送消息
-                </button>
               </div>
             </form>
           </div>
@@ -1290,11 +1258,11 @@ export function ChatWidget({
       {!isOpen ? (
         <button
           type="button"
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,_rgba(27,107,99,1),_rgba(16,69,63,1))] text-white shadow-[0_24px_55px_rgba(16,69,63,0.28)] transition hover:-translate-y-1"
+          className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,_rgba(27,107,99,1),_rgba(16,69,63,1))] text-white shadow-[0_24px_55px_rgba(16,69,63,0.28)] transition hover:-translate-y-1 sm:h-16 sm:w-16"
           onClick={() => setIsOpen(true)}
           aria-label="打开站内问答助手"
         >
-          <MessageCircleMore className="h-7 w-7" />
+          <MessageCircleMore className="h-6 w-6 sm:h-7 sm:w-7" />
         </button>
       ) : null}
     </div>

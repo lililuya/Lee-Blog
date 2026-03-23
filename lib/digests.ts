@@ -6,7 +6,7 @@ import { isDatabaseConfigured, slugify } from "@/lib/utils";
 const DAY_MS = 1000 * 60 * 60 * 24;
 const SHANGHAI_TIMEZONE = "Asia/Shanghai";
 
-function formatShanghaiDate(date: Date, locale: string = "en-CA") {
+function formatShanghaiDate(date: Date, locale = "en-CA") {
   return new Intl.DateTimeFormat(locale, {
     timeZone: SHANGHAI_TIMEZONE,
     year: "numeric",
@@ -17,6 +17,7 @@ function formatShanghaiDate(date: Date, locale: string = "en-CA") {
 
 function truncate(text: string, maxLength: number) {
   const compact = text.replace(/\s+/g, " ").trim();
+
   if (compact.length <= maxLength) {
     return compact;
   }
@@ -36,13 +37,7 @@ export function getWeeklyDigestWindow(referenceDate = new Date()) {
   };
 }
 
-function buildHighlights({
-  paperCount,
-  topicCount,
-  journalCount,
-  postCount,
-  featuredTopics,
-}: {
+function buildHighlights(input: {
   paperCount: number;
   topicCount: number;
   journalCount: number;
@@ -50,19 +45,19 @@ function buildHighlights({
   featuredTopics: string[];
 }) {
   const highlights = [
-    paperCount > 0
-      ? `本周同步了 ${paperCount} 篇论文，覆盖 ${topicCount} 个研究主题。`
-      : "本周暂无新的论文同步结果。",
-    journalCount > 0
-      ? `记录了 ${journalCount} 条阶段性日志，方便后续回顾研究推进节奏。`
-      : "本周没有新增日志记录。",
-    postCount > 0
-      ? `发布了 ${postCount} 篇正式文章，可以作为本周重点输出继续沉淀。`
-      : "本周暂无新发布文章。",
+    input.paperCount > 0
+      ? `Tracked ${input.paperCount} papers across ${input.topicCount} active research topics this week.`
+      : "No new synchronized paper entries landed in this digest window.",
+    input.journalCount > 0
+      ? `Logged ${input.journalCount} journal updates to capture process, notes, and intermediate conclusions.`
+      : "No new journal updates were published during this digest window.",
+    input.postCount > 0
+      ? `Published ${input.postCount} public posts that turned this week's work into reusable output.`
+      : "No new public posts were published during this digest window.",
   ];
 
-  if (featuredTopics.length > 0) {
-    highlights.push(`最值得优先关注的主题是 ${featuredTopics.join("、")}。`);
+  if (input.featuredTopics.length > 0) {
+    highlights.push(`Priority topics this week: ${input.featuredTopics.join(", ")}.`);
   }
 
   return highlights.slice(0, 4);
@@ -75,7 +70,7 @@ export async function generateWeeklyDigest(referenceDate = new Date()) {
 
   const { periodStart, periodEnd, periodEndExclusive } = getWeeklyDigestWindow(referenceDate);
 
-  const [papers, journals, posts] = await Promise.all([
+  const [papers, journals, posts, existingDigest] = await Promise.all([
     prisma.dailyPaperEntry.findMany({
       where: {
         digestDate: {
@@ -104,8 +99,21 @@ export async function generateWeeklyDigest(referenceDate = new Date()) {
           lt: periodEndExclusive,
         },
       },
-      include: { author: true },
       orderBy: { publishedAt: "desc" },
+    }),
+    prisma.weeklyDigest.findUnique({
+      where: {
+        periodStart_periodEnd: {
+          periodStart,
+          periodEnd,
+        },
+      },
+      select: {
+        id: true,
+        publishedAt: true,
+        seriesId: true,
+        seriesOrder: true,
+      },
     }),
   ]);
 
@@ -138,15 +146,15 @@ export async function generateWeeklyDigest(referenceDate = new Date()) {
   });
 
   const featuredTopics = topicGroups.slice(0, 3).map((topic) => topic.name);
-  const periodLabel = `${formatShanghaiDate(periodStart, "zh-CN")} - ${formatShanghaiDate(periodEnd, "zh-CN")}`;
-  const title = `每周研究简报 | ${periodLabel}`;
+  const periodLabel = `${formatShanghaiDate(periodStart)} - ${formatShanghaiDate(periodEnd)}`;
+  const title = `Weekly Research Digest | ${periodLabel}`;
   const slug = slugify(
     `weekly-digest-${formatShanghaiDate(periodStart)}-to-${formatShanghaiDate(periodEnd)}`,
   );
   const summary =
     papers.length > 0 || journals.length > 0 || posts.length > 0
-      ? `本期简报覆盖 ${formatShanghaiDate(periodStart, "zh-CN")} 至 ${formatShanghaiDate(periodEnd, "zh-CN")} 的站内更新，共整理 ${papers.length} 篇论文、${journals.length} 条日志和 ${posts.length} 篇文章。`
-      : `本期简报覆盖 ${formatShanghaiDate(periodStart, "zh-CN")} 至 ${formatShanghaiDate(periodEnd, "zh-CN")}。这一周暂无新的论文、日志或文章内容进入归档。`;
+      ? `This issue covers ${formatShanghaiDate(periodStart)} through ${formatShanghaiDate(periodEnd)} with ${papers.length} papers, ${journals.length} journal updates, and ${posts.length} published posts.`
+      : `This issue covers ${formatShanghaiDate(periodStart)} through ${formatShanghaiDate(periodEnd)}. No new papers, journals, or posts entered the public digest flow this week.`;
 
   const highlights = buildHighlights({
     paperCount: papers.length,
@@ -163,105 +171,99 @@ export async function generateWeeklyDigest(referenceDate = new Date()) {
           .map((topic) => {
             const lines = topic.papers.slice(0, 3).map((paper) => {
               const category = paper.primaryCategory ? ` (${paper.primaryCategory})` : "";
-              return `- [${paper.title}](${paper.paperUrl})${category}：${truncate(paper.summary, 120)}`;
+              return `- [${paper.title}](${paper.paperUrl})${category}: ${truncate(paper.summary, 120)}`;
             });
 
             return `### ${topic.name}\n\n${lines.join("\n")}`;
           })
           .join("\n\n")
-      : "本周没有同步到新的论文条目。";
+      : "No newly synchronized paper entries were captured in this weekly window.";
 
   const journalSection =
     journals.length > 0
       ? journals
           .slice(0, 5)
-          .map(
-            (entry) =>
-              `- **${entry.title}**：${truncate(entry.summary, 110)}`,
-          )
+          .map((entry) => `- **${entry.title}**: ${truncate(entry.summary, 110)}`)
           .join("\n")
-      : "- 本周没有新增日志记录。";
+      : "- No new journal entries were published this week.";
 
   const postSection =
     posts.length > 0
       ? posts
           .slice(0, 4)
-          .map(
-            (post) =>
-              `- [${post.title}](/blog/${post.slug})：${truncate(post.excerpt, 110)}`,
-          )
+          .map((post) => `- [${post.title}](/blog/${post.slug}): ${truncate(post.excerpt, 110)}`)
           .join("\n")
-      : "- 本周没有新增公开文章。";
+      : "- No new public posts were published this week.";
 
   const nextFocus = [
     featuredTopics[0]
-      ? `优先深入阅读 ${featuredTopics[0]} 主题下最相关的 2-3 篇论文，并补充个人批注。`
-      : "下周可以先在后台补充新的论文主题，让研究输入更持续。",
+      ? `Read two or three more papers under ${featuredTopics[0]} and turn the strongest ideas into annotations or note cards.`
+      : "Add or refine research topics in the admin console so the next digest has a stronger intake stream.",
     journals.length > 0
-      ? "把本周日志中的阶段性结论整理成更稳定的知识卡片或长文草稿。"
-      : "如果本周更多是在阅读和准备阶段，建议增加一条日志记录保存过程信息。",
+      ? "Promote the strongest journal conclusions into durable notes, outlines, or longer essays."
+      : "Capture at least one working journal entry next week so research progress is easier to review later.",
     posts.length > 0
-      ? "把新发布文章与对应论文建立交叉引用，提高站内知识可检索性。"
-      : "如果已有足够素材，可以将其中一个主题发展成完整博客文章。",
+      ? "Cross-link this week's new posts with the notes and papers they rely on to strengthen the site knowledge graph."
+      : "Turn one promising paper cluster or journal thread into a public-facing article next week.",
   ]
     .filter(Boolean)
     .map((item) => `- ${item}`)
     .join("\n");
 
   const content = [
-    "## 本周概览",
+    "## Weekly overview",
     ...highlights.map((item) => `- ${item}`),
     "",
-    "## 本周重点主题",
+    "## Topic clusters",
     topicSection,
     "",
-    "## 日志回顾",
+    "## Journal recap",
     journalSection,
     "",
-    "## 本周输出",
+    "## Published output",
     postSection,
     "",
-    "## 下周建议关注",
+    "## Next focus",
     nextFocus,
   ].join("\n");
 
-  const digest = await prisma.weeklyDigest.upsert({
-    where: {
-      periodStart_periodEnd: {
-        periodStart,
-        periodEnd,
-      },
-    },
-    update: {
-      title,
-      slug,
-      summary,
-      content,
-      highlights,
-      featuredTopics,
-      paperCount: papers.length,
-      journalCount: journals.length,
-      postCount: posts.length,
-      publishedAt: new Date(),
-    },
-    create: {
-      title,
-      slug,
-      summary,
-      content,
-      highlights,
-      featuredTopics,
-      paperCount: papers.length,
-      journalCount: journals.length,
-      postCount: posts.length,
-      periodStart,
-      periodEnd,
-      publishedAt: new Date(),
-    },
-  });
+  const publishedAt = existingDigest?.publishedAt ?? new Date();
+  const digest = existingDigest
+    ? await prisma.weeklyDigest.update({
+        where: { id: existingDigest.id },
+        data: {
+          title,
+          slug,
+          summary,
+          content,
+          highlights,
+          featuredTopics,
+          paperCount: papers.length,
+          journalCount: journals.length,
+          postCount: posts.length,
+          publishedAt,
+        },
+      })
+    : await prisma.weeklyDigest.create({
+        data: {
+          title,
+          slug,
+          summary,
+          content,
+          highlights,
+          featuredTopics,
+          paperCount: papers.length,
+          journalCount: journals.length,
+          postCount: posts.length,
+          periodStart,
+          periodEnd,
+          publishedAt,
+        },
+      });
 
   return {
     digest,
+    wasCreated: !existingDigest,
     stats: {
       paperCount: papers.length,
       journalCount: journals.length,

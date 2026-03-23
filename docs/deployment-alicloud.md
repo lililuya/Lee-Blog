@@ -20,7 +20,7 @@ For Alibaba Cloud, a practical setup is:
 4. place the production `.env`
 5. start PostgreSQL
 6. run `npm run db:push`
-7. run `npm run db:seed`
+7. run `npm run db:bootstrap`
 8. start the app service
 9. configure your domain and HTTPS
 

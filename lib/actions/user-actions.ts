@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { ADMIN_AUDIT_ACTIONS, buildAdminAuditLogData } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { formatUserRole } from "@/lib/user-state";
 import { isDatabaseConfigured } from "@/lib/utils";
 import {
   userLifecycleSchema,
@@ -102,7 +103,7 @@ export async function changeUserRoleAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_ROLE_CHANGED,
-        summary: `Changed ${targetUser.email} role from ${targetUser.role} to ${parsed.role}.`,
+        summary: `已将 ${targetUser.email} 的角色从 ${formatUserRole(targetUser.role)} 调整为 ${formatUserRole(parsed.role)}。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -158,7 +159,7 @@ export async function muteUserAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_MUTED,
-        summary: `Muted ${targetUser.email} from commenting for ${parsed.days} day(s).`,
+        summary: `已将 ${targetUser.email} 的评论权限禁言 ${parsed.days} 天。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -198,7 +199,7 @@ export async function unmuteUserAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_UNMUTED,
-        summary: `Removed comment mute for ${targetUser.email}.`,
+        summary: `已解除 ${targetUser.email} 的评论禁言。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -249,7 +250,7 @@ export async function suspendUserAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_SUSPENDED,
-        summary: `Suspended sign-in access for ${targetUser.email}.`,
+        summary: `已暂停 ${targetUser.email} 的登录权限。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -291,7 +292,7 @@ export async function restoreUserAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_RESTORED,
-        summary: `Restored ${targetUser.email} to active status.`,
+        summary: `已将 ${targetUser.email} 恢复为正常状态。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -344,7 +345,7 @@ export async function deleteUserAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_DELETED,
-        summary: `Soft-deleted ${targetUser.email}.`,
+        summary: `已软删除 ${targetUser.email}。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {
@@ -383,7 +384,7 @@ export async function revokeUserSessionsAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.USER_SESSIONS_REVOKED,
-        summary: `Revoked all sessions for ${targetUser.email}.`,
+        summary: `已撤销 ${targetUser.email} 的全部会话。`,
         actorId: admin.id,
         targetUserId: targetUser.id,
         metadata: {

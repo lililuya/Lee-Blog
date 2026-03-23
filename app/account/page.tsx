@@ -35,42 +35,42 @@ function resolveAvatarFeedback(searchParams: AccountPageSearchParams) {
   if (searchParams.saved) {
     return {
       tone: "success" as const,
-      message: "Avatar updated. The new image should appear anywhere your profile badge is shown.",
+      message: "头像已更新。新的图片会显示在站内所有个人标识位置。",
     };
   }
 
   if (searchParams.removed) {
     return {
       tone: "success" as const,
-      message: "Avatar removed. The site will fall back to your initials.",
+      message: "头像已移除。站点会退回显示你的姓名首字。",
     };
   }
 
   if (searchParams.error === "no-file") {
     return {
       tone: "error" as const,
-      message: "Choose an image file before submitting.",
+      message: "提交前请先选择图片文件。",
     };
   }
 
   if (searchParams.error === "file-too-large") {
     return {
       tone: "error" as const,
-      message: `Avatar files must be ${avatarMaxUploadLabel} or smaller.`,
+      message: `头像文件大小必须不超过 ${avatarMaxUploadLabel}。`,
     };
   }
 
   if (searchParams.error === "invalid-type") {
     return {
       tone: "error" as const,
-      message: "Only PNG, JPG/JPEG, and WEBP images are supported.",
+      message: "仅支持 PNG、JPG/JPEG 和 WEBP 图片。",
     };
   }
 
   if (searchParams.error === "database") {
     return {
       tone: "error" as const,
-      message: "The database is currently unavailable, so avatar changes could not be saved.",
+      message: "当前数据库不可用，无法保存头像变更。",
     };
   }
 
@@ -81,42 +81,42 @@ function resolvePasswordFeedback(searchParams: AccountPageSearchParams) {
   if (searchParams.password === "updated") {
     return {
       tone: "success" as const,
-      message: "Password updated. Other active sessions were signed out.",
+      message: "密码已更新，其他已登录会话也已被退出。",
     };
   }
 
   if (searchParams.password === "invalid-current") {
     return {
       tone: "error" as const,
-      message: "The current password you entered is incorrect.",
+      message: "你输入的当前密码不正确。",
     };
   }
 
   if (searchParams.password === "same") {
     return {
       tone: "error" as const,
-      message: "Choose a new password that is different from the current one.",
+      message: "请设置一个与当前密码不同的新密码。",
     };
   }
 
   if (searchParams.password === "invalid") {
     return {
       tone: "error" as const,
-      message: "Please complete all password fields and make sure the new passwords match.",
+      message: "请完整填写密码字段，并确保两次新密码输入一致。",
     };
   }
 
   if (searchParams.password === "database") {
     return {
       tone: "error" as const,
-      message: "The database is currently unavailable, so the password could not be updated.",
+      message: "当前数据库不可用，因此无法更新密码。",
     };
   }
 
   if (searchParams.password === "error") {
     return {
       tone: "error" as const,
-      message: "The password could not be updated right now. Please try again.",
+      message: "暂时无法更新密码，请稍后再试。",
     };
   }
 
@@ -127,21 +127,21 @@ function resolveUpdatesFeedback(searchParams: AccountPageSearchParams) {
   if (searchParams.updates === "enabled") {
     return {
       tone: "success" as const,
-      message: "New post email updates are enabled for this account.",
+      message: "这个账号已开启新文章邮件提醒。",
     };
   }
 
   if (searchParams.updates === "disabled") {
     return {
       tone: "success" as const,
-      message: "New post email updates are paused for this account.",
+      message: "这个账号已暂停新文章邮件提醒。",
     };
   }
 
   if (searchParams.updates === "database") {
     return {
       tone: "error" as const,
-      message: "The database is currently unavailable, so the email preference could not be saved.",
+      message: "当前数据库不可用，因此无法保存邮件偏好设置。",
     };
   }
 
@@ -152,14 +152,14 @@ function resolveCommentNotificationFeedback(searchParams: AccountPageSearchParam
   if (searchParams.comments === "updated") {
     return {
       tone: "success" as const,
-      message: "Comment notification preferences were updated.",
+      message: "评论通知偏好已更新。",
     };
   }
 
   if (searchParams.comments === "database") {
     return {
       tone: "error" as const,
-      message: "The database is currently unavailable, so comment notification preferences could not be saved.",
+      message: "当前数据库不可用，因此无法保存评论通知偏好。",
     };
   }
 
@@ -170,67 +170,79 @@ function resolveSecurityFeedback(searchParams: AccountPageSearchParams) {
   if (searchParams.security === "setup") {
     return {
       tone: "success" as const,
-      message: "Authenticator setup started. Add the key below in your authenticator app, then enter the 6-digit code to finish enabling 2FA.",
+      message: "身份验证器配置已开始。请先把下方密钥加入验证器应用，再输入 6 位验证码完成启用。",
     };
   }
 
   if (searchParams.security === "setup-cancelled") {
     return {
       tone: "success" as const,
-      message: "Pending 2FA setup was cancelled.",
+      message: "待完成的两步验证配置已取消。",
     };
   }
 
   if (searchParams.security === "enabled") {
     return {
       tone: "success" as const,
-      message: "Two-factor authentication is now enabled for admin sign-in.",
+      message: "管理员登录已启用两步验证。",
     };
   }
 
   if (searchParams.security === "disabled") {
     return {
       tone: "success" as const,
-      message: "Two-factor authentication has been turned off for this account.",
+      message: "这个账号的两步验证已关闭。",
     };
   }
 
   if (searchParams.security === "invalid-code") {
     return {
       tone: "error" as const,
-      message: "That authenticator code was not valid. Please try the latest 6-digit code.",
+      message: "验证码无效，请尝试验证器里最新的 6 位数字。",
     };
   }
 
   if (searchParams.security === "invalid-password") {
     return {
       tone: "error" as const,
-      message: "The current password you entered was incorrect.",
+      message: "你输入的当前密码不正确。",
     };
   }
 
   if (searchParams.security === "setup-missing") {
     return {
       tone: "error" as const,
-      message: "No pending 2FA setup was found. Start a new setup to continue.",
+      message: "没有找到待完成的两步验证配置，请重新开始设置。",
     };
   }
 
   if (searchParams.security === "database") {
     return {
       tone: "error" as const,
-      message: "The database is currently unavailable, so 2FA settings could not be updated.",
+      message: "当前数据库不可用，因此无法更新两步验证设置。",
     };
   }
 
   if (searchParams.security === "admin-only") {
     return {
       tone: "error" as const,
-      message: "Two-factor authentication management is currently reserved for admin accounts.",
+      message: "当前只有管理员账号可以管理两步验证。",
     };
   }
 
   return null;
+}
+
+function formatRoleLabel(role: string) {
+  if (role === "ADMIN") {
+    return "管理员";
+  }
+
+  if (role === "USER") {
+    return "用户";
+  }
+
+  return role;
 }
 
 function FeedbackBanner({
@@ -293,81 +305,81 @@ export default async function AccountPage({
       <div className="mb-8">
         <Link href="/" className="btn-ghost inline-flex items-center gap-2 px-0 text-[var(--accent-strong)]">
           <ArrowLeft className="h-4 w-4" />
-          Back to home
+          返回首页
         </Link>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-        <section className="glass-card flex flex-col items-center rounded-[2.2rem] p-8 text-center">
+      <div className="editorial-shell grid gap-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+        <section className="editorial-panel flex flex-col items-center p-8 text-center">
           <AvatarBadge
             name={currentUser.name}
             src={currentUser.avatarUrl}
             className="h-28 w-28 border-white/50 bg-white/70 text-2xl"
             fallbackLabel={currentUser.name}
           />
-          <p className="section-kicker mt-6">Profile</p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight">Account settings</h1>
+          <p className="section-kicker mt-6">账户</p>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight">账户设置</h1>
           <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-            Manage the public avatar shown around the site and keep your password up to date.
+            在这里管理站内公开显示的头像，并维护你的密码和通知偏好。
           </p>
 
-          <dl className="mt-6 w-full space-y-3 rounded-[1.6rem] border border-black/8 bg-white/72 px-5 py-4 text-left text-sm text-[var(--ink-soft)]">
+          <dl className="editorial-note-box mt-6 w-full space-y-3 px-5 py-4 text-left text-sm text-[var(--ink-soft)]">
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Name
+                名称
               </dt>
               <dd className="mt-1 text-base font-semibold text-[var(--ink)]">{currentUser.name}</dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Email
+                邮箱
               </dt>
               <dd className="mt-1 break-all text-base text-[var(--ink)]">{currentUser.email}</dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Role
+                角色
               </dt>
-              <dd className="mt-1 text-base text-[var(--ink)]">{currentUser.role}</dd>
+              <dd className="mt-1 text-base text-[var(--ink)]">{formatRoleLabel(currentUser.role)}</dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Email status
+                邮箱状态
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
-                {currentUser.emailVerifiedAt ? "Verified" : "Pending verification"}
+                {currentUser.emailVerifiedAt ? "已验证" : "待验证"}
               </dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                New post emails
+                新文章邮件
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
-                {currentUser.emailPostNotifications ? "Subscribed" : "Paused"}
+                {currentUser.emailPostNotifications ? "已订阅" : "已暂停"}
               </dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Comment emails
+                评论邮件
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
-                {currentUser.emailCommentNotifications ? "Enabled" : "Muted"}
+                {currentUser.emailCommentNotifications ? "已开启" : "已静音"}
               </dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                In-app inbox
+                站内通知
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
-                {currentUser.inAppCommentNotifications ? "Enabled" : "Muted"}
+                {currentUser.inAppCommentNotifications ? "已开启" : "已静音"}
               </dd>
             </div>
             <div>
               <dt className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                Inbox
+                通知中心
               </dt>
               <dd className="mt-1 text-base text-[var(--ink)]">
-                {unreadNotificationCount > 0 ? `${unreadNotificationCount} unread` : "All caught up"}
+                {unreadNotificationCount > 0 ? `${unreadNotificationCount} 条未读` : "全部处理完毕"}
               </dd>
             </div>
           </dl>
@@ -379,18 +391,18 @@ export default async function AccountPage({
             <span className="section-link-pill__icon">
               <BellRing className="h-4 w-4" />
             </span>
-            Open inbox
+            打开通知中心
           </Link>
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+          <section className="editorial-panel p-6 md:p-8">
             <div className="max-w-2xl space-y-6">
               <div>
-                <p className="section-kicker">Avatar</p>
-                <h2 className="font-serif text-3xl font-semibold tracking-tight">Upload your avatar</h2>
+                <p className="section-kicker">头像</p>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">上传头像</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                  Use a square image when possible. PNG, JPG/JPEG, and WEBP are supported up to {avatarMaxUploadLabel}.
+                  尽量使用正方形图片。支持 PNG、JPG/JPEG 和 WEBP，大小不超过 {avatarMaxUploadLabel}。
                 </p>
               </div>
 
@@ -398,7 +410,7 @@ export default async function AccountPage({
 
               <form action={uploadAvatarAction} className="space-y-4">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[var(--ink)]">Choose an image</span>
+                  <span className="text-sm font-semibold text-[var(--ink)]">选择图片</span>
                   <input
                     name="avatar"
                     type="file"
@@ -409,7 +421,7 @@ export default async function AccountPage({
                 </label>
 
                 <div className="flex flex-wrap gap-3">
-                  <SubmitButton className="px-5">Save avatar</SubmitButton>
+                  <SubmitButton className="px-5">保存头像</SubmitButton>
                 </div>
               </form>
 
@@ -417,20 +429,20 @@ export default async function AccountPage({
                 <form action={removeAvatarAction} className="border-t border-black/8 pt-5">
                   <button type="submit" className="btn-secondary">
                     <Trash2 className="h-4 w-4" />
-                    Remove current avatar
+                    移除当前头像
                   </button>
                 </form>
               ) : null}
             </div>
           </section>
 
-          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+          <section className="editorial-panel p-6 md:p-8">
             <div className="max-w-2xl space-y-6">
               <div>
-                <p className="section-kicker">Email updates</p>
-                <h2 className="font-serif text-3xl font-semibold tracking-tight">New post notifications</h2>
+                <p className="section-kicker">邮件更新</p>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">新文章提醒</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                  Subscribe to email alerts when a newly published blog post goes live. The site uses your verified account email and follows the configured SMTP delivery settings.
+                  当博客有新文章发布时，你可以通过邮件接收提醒。站点会使用你已验证的邮箱，并遵循当前 SMTP 配置。
                 </p>
               </div>
 
@@ -438,14 +450,14 @@ export default async function AccountPage({
                 <FeedbackBanner tone={updatesFeedback.tone} message={updatesFeedback.message} />
               ) : null}
 
-              <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+              <div className="editorial-note-box p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="space-y-2">
                     <p className="text-sm font-semibold text-[var(--ink)]">
-                      Current setting: {currentUser.emailPostNotifications ? "Subscribed" : "Paused"}
+                      当前设置：{currentUser.emailPostNotifications ? "已订阅" : "已暂停"}
                     </p>
                     <p className="text-sm leading-7 text-[var(--ink-soft)]">
-                      You will only receive one email when a post is newly published, not for every later edit.
+                      只有文章首次发布时会发送一封提醒邮件，后续编辑不会重复打扰你。
                     </p>
                   </div>
 
@@ -456,7 +468,7 @@ export default async function AccountPage({
                       value={currentUser.emailPostNotifications ? "false" : "true"}
                     />
                     <SubmitButton className="px-5">
-                      {currentUser.emailPostNotifications ? "Pause email updates" : "Enable email updates"}
+                      {currentUser.emailPostNotifications ? "暂停邮件提醒" : "开启邮件提醒"}
                     </SubmitButton>
                   </form>
                 </div>
@@ -464,13 +476,13 @@ export default async function AccountPage({
             </div>
           </section>
 
-          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+          <section className="editorial-panel p-6 md:p-8">
             <div className="max-w-3xl space-y-6">
               <div>
-                <p className="section-kicker">Comment alerts</p>
-                <h2 className="font-serif text-3xl font-semibold tracking-tight">Comment notification preferences</h2>
+                <p className="section-kicker">评论提醒</p>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">评论通知偏好</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                  Control whether the site emails you about replies and moderation decisions, and whether those updates appear in your in-app inbox.
+                  控制站点是否通过邮件告知你回复和审核结果，以及这些更新是否显示在站内通知中心。
                 </p>
               </div>
 
@@ -483,7 +495,7 @@ export default async function AccountPage({
 
               <form action={updateCommentNotificationSettingsAction} className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <label className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                  <label className="editorial-note-box p-5">
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
@@ -492,15 +504,15 @@ export default async function AccountPage({
                         className="mt-1 h-4 w-4 rounded border-black/20 text-[var(--accent-strong)]"
                       />
                       <div>
-                        <p className="text-sm font-semibold text-[var(--ink)]">Email me about comment updates</p>
+                        <p className="text-sm font-semibold text-[var(--ink)]">通过邮件通知我评论动态</p>
                         <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
-                          Receive email when your comment is approved or rejected, or when someone replies to your comment.
+                          当你的评论被通过、被拒绝，或有人回复你的评论时，通过邮件提醒你。
                         </p>
                       </div>
                     </div>
                   </label>
 
-                  <label className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                  <label className="editorial-note-box p-5">
                     <div className="flex items-start gap-3">
                       <input
                         type="checkbox"
@@ -509,38 +521,38 @@ export default async function AccountPage({
                         className="mt-1 h-4 w-4 rounded border-black/20 text-[var(--accent-strong)]"
                       />
                       <div>
-                        <p className="text-sm font-semibold text-[var(--ink)]">Show comment updates in inbox</p>
+                        <p className="text-sm font-semibold text-[var(--ink)]">在通知中心显示评论动态</p>
                         <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
-                          Keep replies, moderation decisions, and submission status updates in your account notification center.
+                          把回复提醒、审核结果和提交状态更新同步到你的账户通知中心。
                         </p>
                       </div>
                     </div>
                   </label>
                 </div>
 
-                <div className="rounded-[1.6rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.5)] px-5 py-4 text-sm leading-7 text-[var(--ink-soft)]">
-                  Admin-only moderation inbox and system-level security flows stay enabled even if you mute user-facing comment alerts here.
+                <div className="editorial-note-box border-dashed px-5 py-4 text-sm leading-7 text-[var(--ink-soft)]">
+                  即使你在这里关闭用户侧评论提醒，管理员专用的审核通知和系统级安全流程仍会保持启用。
                 </div>
 
-                <SubmitButton className="px-5">Save comment preferences</SubmitButton>
+                <SubmitButton className="px-5">保存评论偏好</SubmitButton>
               </form>
             </div>
           </section>
 
-          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+          <section className="editorial-panel p-6 md:p-8">
             <div className="max-w-3xl space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="section-kicker">Inbox</p>
-                  <h2 className="font-serif text-3xl font-semibold tracking-tight">Recent notifications</h2>
+                  <p className="section-kicker">通知</p>
+                  <h2 className="font-serif text-3xl font-semibold tracking-tight">最近通知</h2>
                   <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                    Keep an eye on comment reviews, replies, and other account events without relying on email alone.
+                    不依赖邮件，也能在这里随时查看评论审核、回复提醒和其他账户动态。
                   </p>
                 </div>
 
-                <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] px-5 py-4 text-right">
+                <div className="editorial-note-box px-5 py-4 text-right">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                    Unread
+                    未读
                   </p>
                   <p className="mt-1 text-2xl font-semibold text-[var(--ink)]">{unreadNotificationCount}</p>
                 </div>
@@ -553,7 +565,7 @@ export default async function AccountPage({
                       key={notification.id}
                       className={
                         notification.isRead
-                          ? "rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.58)] px-5 py-4"
+                          ? "editorial-note-box px-5 py-4"
                           : "rounded-[1.6rem] border border-[rgba(27,107,99,0.18)] bg-[rgba(27,107,99,0.08)] px-5 py-4"
                       }
                     >
@@ -568,7 +580,7 @@ export default async function AccountPage({
                                   : "badge-soft"
                               }
                             >
-                              {notification.isRead ? "Read" : "Unread"}
+                              {notification.isRead ? "已读" : "未读"}
                             </span>
                           </div>
                           <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">{notification.body}</p>
@@ -582,10 +594,10 @@ export default async function AccountPage({
                   ))}
                 </div>
               ) : (
-                <div className="rounded-[1.6rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.52)] px-5 py-8 text-center">
-                  <p className="text-base font-semibold text-[var(--ink)]">No notifications yet.</p>
+                <div className="editorial-note-box border-dashed px-5 py-8 text-center">
+                  <p className="text-base font-semibold text-[var(--ink)]">暂时还没有通知。</p>
                   <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
-                    When someone replies or a comment is reviewed, the update will appear here.
+                    当有人回复你，或者评论被审核时，更新会显示在这里。
                   </p>
                 </div>
               )}
@@ -594,19 +606,19 @@ export default async function AccountPage({
                 <span className="section-link-pill__icon">
                   <BellRing className="h-4 w-4" />
                 </span>
-                Open notification center
+                打开通知中心
               </Link>
             </div>
           </section>
 
           {currentUser.role === "ADMIN" ? (
-            <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+            <section className="editorial-panel p-6 md:p-8">
               <div className="max-w-3xl space-y-6">
                 <div>
-                  <p className="section-kicker">Admin security</p>
-                  <h2 className="font-serif text-3xl font-semibold tracking-tight">Two-factor authentication</h2>
+                  <p className="section-kicker">管理员安全</p>
+                  <h2 className="font-serif text-3xl font-semibold tracking-tight">两步验证</h2>
                   <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                    Protect admin sign-in with a time-based authenticator code. After it is enabled, password-only login is no longer enough for this account.
+                    用基于时间的一次性验证码保护管理员登录。启用后，这个账号不能只靠密码完成登录。
                   </p>
                 </div>
 
@@ -614,53 +626,54 @@ export default async function AccountPage({
                   <FeedbackBanner tone={securityFeedback.tone} message={securityFeedback.message} />
                 ) : null}
 
-                <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                <div className="editorial-note-box p-5">
                   <p className="text-sm font-semibold text-[var(--ink)]">
-                    Current setting:{" "}
+                    当前设置：
+                    {" "}
                     {securityProfile?.twoFactorEnabled
-                      ? "Enabled"
+                      ? "已启用"
                       : securityProfile?.twoFactorTempSecret
-                        ? "Setup pending"
-                        : "Disabled"}
+                        ? "待完成设置"
+                        : "已关闭"}
                   </p>
                   <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
                     {securityProfile?.twoFactorEnabled
-                      ? `Enabled at ${securityProfile.twoFactorEnabledAt?.toLocaleString() ?? "an earlier time"}.`
+                      ? `启用时间：${securityProfile.twoFactorEnabledAt?.toLocaleString() ?? "更早之前"}。`
                       : securityProfile?.twoFactorTempSecret
-                        ? "Finish the setup with the latest authenticator code to activate 2FA."
-                        : "Use an authenticator app such as Microsoft Authenticator, Google Authenticator, 1Password, or Authy."}
+                        ? "输入最新的身份验证器验证码即可完成两步验证设置。"
+                        : "可使用 Microsoft Authenticator、Google Authenticator、1Password 或 Authy 等验证器应用。"}
                   </p>
                 </div>
 
                 {securityProfile?.twoFactorEnabled ? (
-                  <form action={disableTwoFactorAction} className="grid gap-4 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5 md:max-w-xl">
+                  <form action={disableTwoFactorAction} className="editorial-note-box grid gap-4 p-5 md:max-w-xl">
                     <label className="block space-y-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Current password</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">当前密码</span>
                       <input
                         name="currentPassword"
                         type="password"
                         minLength={8}
                         autoComplete="current-password"
                         className="field"
-                        placeholder="Enter your current password"
+                        placeholder="输入当前密码"
                         required
                       />
                     </label>
                     <div className="pt-2">
-                      <SubmitButton className="px-5">Disable 2FA</SubmitButton>
+                      <SubmitButton className="px-5">关闭两步验证</SubmitButton>
                     </div>
                   </form>
                 ) : securityProfile?.twoFactorTempSecret ? (
                   <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                    <div className="rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
-                      <p className="text-sm font-semibold text-[var(--ink)]">Setup details</p>
+                    <div className="editorial-note-box p-5">
+                      <p className="text-sm font-semibold text-[var(--ink)]">设置详情</p>
                       <p className="mt-2 text-sm leading-7 text-[var(--ink-soft)]">
-                        Add this secret key in your authenticator app. If your app supports direct URI import, you can also paste the full otpauth URI shown below.
+                        把这串密钥添加到你的验证器应用里。如果应用支持直接导入 URI，也可以粘贴下面完整的 otpauth URI。
                       </p>
 
                       <label className="mt-4 block space-y-2">
                         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
-                          Manual entry key
+                          手动输入密钥
                         </span>
                         <input
                           readOnly
@@ -685,9 +698,9 @@ export default async function AccountPage({
                     </div>
 
                     <div className="space-y-4">
-                      <form action={confirmTwoFactorSetupAction} className="grid gap-4 rounded-[1.6rem] border border-black/8 bg-[rgba(255,255,255,0.6)] p-5">
+                      <form action={confirmTwoFactorSetupAction} className="editorial-note-box grid gap-4 p-5">
                         <label className="block space-y-2">
-                          <span className="text-sm font-semibold text-[var(--ink)]">Authenticator code</span>
+                          <span className="text-sm font-semibold text-[var(--ink)]">验证码</span>
                           <input
                             name="code"
                             inputMode="numeric"
@@ -700,33 +713,33 @@ export default async function AccountPage({
                           />
                         </label>
                         <div className="pt-2">
-                          <SubmitButton className="px-5">Confirm and enable 2FA</SubmitButton>
+                          <SubmitButton className="px-5">确认并启用两步验证</SubmitButton>
                         </div>
                       </form>
 
                       <form action={cancelTwoFactorSetupAction}>
                         <button type="submit" className="btn-secondary w-full justify-center">
-                          Cancel setup
+                          取消设置
                         </button>
                       </form>
                     </div>
                   </div>
                 ) : (
                   <form action={beginTwoFactorSetupAction}>
-                    <SubmitButton className="px-5">Start 2FA setup</SubmitButton>
+                    <SubmitButton className="px-5">开始设置两步验证</SubmitButton>
                   </form>
                 )}
               </div>
             </section>
           ) : null}
 
-          <section className="rounded-[2.2rem] border border-black/8 bg-white/82 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)] md:p-8">
+          <section className="editorial-panel p-6 md:p-8">
             <div className="max-w-2xl space-y-6">
               <div>
-                <p className="section-kicker">Security</p>
-                <h2 className="font-serif text-3xl font-semibold tracking-tight">Change password</h2>
+                <p className="section-kicker">安全</p>
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">修改密码</h2>
                 <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-                  Choose a strong password with at least 8 characters. Other active sessions will be signed out after the update.
+                  请设置至少 8 位字符的强密码。更新之后，其他已登录会话会自动退出。
                 </p>
               </div>
 
@@ -736,48 +749,48 @@ export default async function AccountPage({
 
               <form action={changePasswordAction} className="grid gap-4">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[var(--ink)]">Current password</span>
+                  <span className="text-sm font-semibold text-[var(--ink)]">当前密码</span>
                   <input
                     name="currentPassword"
                     type="password"
                     minLength={8}
                     autoComplete="current-password"
                     className="field"
-                    placeholder="Current password"
+                    placeholder="当前密码"
                     required
                   />
                 </label>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[var(--ink)]">New password</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">新密码</span>
                     <input
                       name="newPassword"
                       type="password"
                       minLength={8}
                       autoComplete="new-password"
                       className="field"
-                      placeholder="At least 8 characters"
+                      placeholder="至少 8 位字符"
                       required
                     />
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[var(--ink)]">Confirm new password</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">确认新密码</span>
                     <input
                       name="confirmPassword"
                       type="password"
                       minLength={8}
                       autoComplete="new-password"
                       className="field"
-                      placeholder="Repeat the new password"
+                      placeholder="再次输入新密码"
                       required
                     />
                   </label>
                 </div>
 
                 <div className="pt-2">
-                  <SubmitButton className="px-5">Update password</SubmitButton>
+                  <SubmitButton className="px-5">更新密码</SubmitButton>
                 </div>
               </form>
             </div>

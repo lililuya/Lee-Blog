@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import type { PostStatus } from "@prisma/client";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { formatPostStatusLabel } from "@/lib/ui-labels";
 import { formatDate } from "@/lib/utils";
 
 type RevisionHistoryProps = {
@@ -59,7 +60,7 @@ export function RevisionHistory({
   return (
     <section className="rounded-[2rem] border border-black/8 bg-white/80 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
       <div className="space-y-2">
-        <p className="section-kicker">History</p>
+        <p className="section-kicker">历史记录</p>
         <h2 className="font-serif text-3xl font-semibold tracking-tight">{title}</h2>
         <p className="max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">{description}</p>
       </div>
@@ -80,20 +81,20 @@ export function RevisionHistory({
                       v{revision.version}
                     </span>
                     <span className="text-sm text-[var(--ink-soft)]">
-                      Saved {formatDate(revision.createdAt, "yyyy-MM-dd HH:mm")}
+                      保存于 {formatDate(revision.createdAt, "yyyy-MM-dd HH:mm")}
                     </span>
                   </div>
                   <div className="text-sm leading-7 text-[var(--ink-soft)]">
-                    <div>Slug: {revision.slug}</div>
-                    <div>Status: {revision.status}</div>
+                    <div>Slug：{revision.slug}</div>
+                    <div>状态：{formatPostStatusLabel(revision.status)}</div>
                     <div>
-                      Publish at:{" "}
+                      发布时间：
                       {revision.publishedAt
                         ? formatDate(revision.publishedAt, "yyyy-MM-dd HH:mm")
-                        : "Not scheduled"}
+                        : "未设置"}
                     </div>
                     <div>
-                      Saved by: {revision.actor?.name ?? "System"}
+                      保存者：{revision.actor?.name ?? "系统"}
                       {revision.actor?.email ? ` (${revision.actor.email})` : ""}
                     </div>
                   </div>
@@ -101,14 +102,14 @@ export function RevisionHistory({
 
                 <form
                   action={restoreAction}
-                  data-confirm-message={`Restore revision v${revision.version} and overwrite the current draft with that snapshot?`}
+                  data-confirm-message={`确认恢复版本 v${revision.version} 吗？当前草稿会被这个快照覆盖。`}
                   className="w-full max-w-[14rem]"
                 >
                   <input type="hidden" name={itemIdField} value={itemId} />
                   <input type="hidden" name="revisionId" value={revision.id} />
                   <SubmitButton className="w-full justify-center px-4">
                     <RotateCcw className="h-4 w-4" />
-                    Restore v{revision.version}
+                    恢复 v{revision.version}
                   </SubmitButton>
                 </form>
               </div>
@@ -117,7 +118,7 @@ export function RevisionHistory({
         </div>
       ) : (
         <div className="mt-6 rounded-[1.6rem] border border-dashed border-black/10 bg-[rgba(255,255,255,0.45)] px-5 py-6 text-sm leading-7 text-[var(--ink-soft)]">
-          No saved revisions yet. A revision is created automatically whenever this content is saved.
+          还没有保存过修订版本。每次保存当前内容时，系统都会自动创建一个修订快照。
         </div>
       )}
     </section>

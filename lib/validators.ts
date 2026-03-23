@@ -18,6 +18,12 @@ const requiredUrlOrRootRelativeField = z.union([
   z.string().regex(/^\/[^\s]*$/),
 ]);
 const passwordField = z.string().min(8).max(100);
+const contentLanguageField = z
+  .string()
+  .trim()
+  .min(2)
+  .max(20)
+  .regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, "Use a valid language code, such as en-US or zh-CN.");
 const commentModerationRuleModeSchema = z.enum(["ALLOW", "BLOCK"]);
 const commentModerationRuleSeveritySchema = z.enum(["REVIEW", "REJECT"]);
 
@@ -77,6 +83,7 @@ export const postSchema = z.object({
   excerpt: z.string().trim().min(12).max(280),
   content: z.string().trim().min(32),
   category: z.string().trim().min(2).max(60),
+  language: contentLanguageField,
   tags: z.array(z.string()).max(12),
   status: z.nativeEnum(PostStatus),
   pinned: z.boolean(),
@@ -84,6 +91,7 @@ export const postSchema = z.object({
   coverImageUrl: urlField,
   seriesId: z.union([z.string().trim().min(1), z.literal(""), z.null()]).optional(),
   seriesOrder: z.union([z.coerce.number().int().min(1).max(999), z.null()]).optional(),
+  translationOfId: z.union([z.string().trim().min(1), z.literal(""), z.null()]).optional(),
   publishedAt: z.union([z.coerce.date(), z.null()]),
 });
 
@@ -164,6 +172,7 @@ export const profileSchema = z.object({
   backgroundMediaMode: z.enum(["IMAGE", "VIDEO"]),
   backgroundOverlayOpacity: z.coerce.number().int().min(0).max(100),
   assistantAvatarUrl: urlOrRootRelativeField,
+  chatEnabledForReaders: z.boolean(),
   researchAreas: z.array(z.string()).max(12),
   educationMarkdown: z.string().trim().min(8),
   experienceMarkdown: z.string().trim().min(8),
@@ -178,6 +187,21 @@ export const commentSchema = z.object({
   guestEmail: z.union([z.email(), z.literal(""), z.null()]).optional(),
   content: z.string().trim().min(6).max(1200),
 });
+
+export const emailSubscriptionSchema = z.object({
+  email: z.email(),
+  name: z.string().trim().max(80).optional(),
+  postNotificationsEnabled: z.boolean(),
+  digestNotificationsEnabled: z.boolean(),
+  categories: z.array(z.string().trim().min(1).max(60)).max(12),
+  tags: z.array(z.string().trim().min(1).max(60)).max(20),
+}).refine(
+  (value) => value.postNotificationsEnabled || value.digestNotificationsEnabled,
+  {
+    path: ["postNotificationsEnabled"],
+    message: "Select at least one email delivery type.",
+  },
+);
 
 export const providerSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -274,6 +298,11 @@ export const commentModerationRuleDeleteSchema = z.object({
 export const postRevisionRestoreSchema = z.object({
   postId: z.string().trim().min(1),
   revisionId: z.string().trim().min(1),
+});
+
+export const postCategoryRenameSchema = z.object({
+  previousCategory: z.string().trim().min(2).max(60),
+  nextCategory: z.string().trim().min(2).max(60),
 });
 
 export const noteRevisionRestoreSchema = z.object({

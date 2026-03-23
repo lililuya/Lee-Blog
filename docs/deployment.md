@@ -87,9 +87,12 @@ npm run rag:sync
 ```bash
 npm ci
 npm run db:push
-npm run db:seed
+npm run db:bootstrap
+npm run db:seed:demo
 npm run dev
 ```
+
+`npm run db:bootstrap` is the safe default for new databases. Use `npm run db:seed:demo` only when you explicitly want local sample content.
 
 ### 3.2 Docker Compose workflow
 
@@ -97,7 +100,8 @@ npm run dev
 docker compose up -d db
 docker compose up -d app
 docker compose run --rm app npm run db:push
-docker compose run --rm app npm run db:seed
+docker compose run --rm app npm run db:bootstrap
+docker compose run --rm app npm run db:seed:demo
 ```
 
 ## 4. First deployment checklist
@@ -109,7 +113,7 @@ Recommended order:
 3. start PostgreSQL
 4. build or pull the app image
 5. run `npm run db:push`
-6. run `npm run db:seed`
+6. run `npm run db:bootstrap`
 7. start the app container
 8. verify admin login, guest comments, and mail delivery
 9. verify scheduled jobs

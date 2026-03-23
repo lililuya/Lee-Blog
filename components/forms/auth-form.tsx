@@ -30,7 +30,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
     if (!normalizedEmail) {
       setFeedback({
         tone: "error",
-        message: "Please enter your email address first.",
+        message: "请先输入邮箱地址。",
       });
       return;
     }
@@ -47,7 +47,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
         if (!response.ok || !data.ok) {
           setFeedback({
             tone: "error",
-            message: data.error ?? "Could not resend the verification email.",
+            message: data.error ?? "重新发送验证邮件失败。",
             email: normalizedEmail,
           });
           return;
@@ -56,15 +56,15 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
         setFeedback({
           tone: "success",
           message: data.emailSent
-            ? `A fresh verification email has been sent to ${normalizedEmail}.`
-            : `Email delivery is not configured yet. Use the verification link below for now.`,
+            ? `新的验证邮件已发送至 ${normalizedEmail}。`
+            : "当前还未配置邮件投递，请先使用下方验证链接。",
           email: normalizedEmail,
           verificationUrl: data.verificationUrl ?? null,
         });
       } catch {
         setFeedback({
           tone: "error",
-          message: "Could not resend the verification email. Please try again.",
+          message: "重新发送验证邮件失败，请稍后再试。",
           email: normalizedEmail,
         });
       }
@@ -105,7 +105,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
 
           setFeedback({
             tone: "error",
-            message: data.error ?? "Submission failed. Please try again.",
+            message: data.error ?? "提交失败，请稍后再试。",
             code: data.code,
             email: data.email ?? email,
             verificationUrl: data.verificationUrl ?? null,
@@ -118,7 +118,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
           form.reset();
           setFeedback({
             tone: "success",
-            message: `Password verified for ${email}. Enter the 6-digit code from your authenticator app to finish signing in.`,
+            message: `${email} 的密码已验证，请输入身份验证器里的 6 位验证码完成登录。`,
             email,
           });
           return;
@@ -130,11 +130,11 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
             tone: "success",
             message: data.resent
               ? data.emailSent
-                ? `This email is already registered but still waiting for verification. We sent a fresh verification link to ${data.email}.`
-                : "This email is already registered but still waiting for verification. Use the verification link below for now."
+                ? `该邮箱已注册，但仍在等待验证。我们已向 ${data.email} 重新发送验证链接。`
+                : "该邮箱已注册，但仍在等待验证。当前还未配置邮件投递，请先使用下方验证链接。"
               : data.emailSent
-                ? `Account created. We sent a verification link to ${data.email}. Please verify your email before signing in.`
-                : "Account created, but email delivery is not configured yet. Use the verification link below for now.",
+                ? `账号已创建。我们已向 ${data.email} 发送验证链接，请先完成邮箱验证再登录。`
+                : "账号已创建，但当前还未配置邮件投递，请先使用下方验证链接。",
             email: data.email ?? email,
             verificationUrl: data.verificationUrl ?? null,
           });
@@ -150,7 +150,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
       } catch {
         setFeedback({
           tone: "error",
-          message: "Submission failed. Please try again.",
+          message: "提交失败，请稍后再试。",
           email,
         });
       }
@@ -179,24 +179,24 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]"
+      className="editorial-form-shell space-y-5 md:p-7"
     >
       {mode === "register" ? (
         <label className="block space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Display name</span>
-          <input name="name" required minLength={2} className="field" placeholder="Your name" />
+          <span className="text-sm font-semibold text-[var(--ink)]">显示名称</span>
+          <input name="name" required minLength={2} className="field" placeholder="你的称呼" />
         </label>
       ) : null}
       {mode === "login" && twoFactorEmail ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-[rgba(27,107,99,0.16)] bg-[rgba(27,107,99,0.06)] px-4 py-3 text-sm text-[var(--ink-soft)]">
-            <p className="font-semibold text-[var(--ink)]">Two-factor verification</p>
+            <p className="font-semibold text-[var(--ink)]">两步验证</p>
             <p className="mt-1 break-all">
-              Signing in as <span className="font-medium text-[var(--ink)]">{twoFactorEmail}</span>
+              正在登录账号 <span className="font-medium text-[var(--ink)]">{twoFactorEmail}</span>
             </p>
           </div>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-[var(--ink)]">Authenticator code</span>
+            <span className="text-sm font-semibold text-[var(--ink)]">验证码</span>
             <input
               name="code"
               inputMode="numeric"
@@ -212,7 +212,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
       ) : (
         <>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-[var(--ink)]">Email</span>
+            <span className="text-sm font-semibold text-[var(--ink)]">邮箱</span>
             <input
               name="email"
               type="email"
@@ -222,14 +222,14 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
             />
           </label>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-[var(--ink)]">Password</span>
+            <span className="text-sm font-semibold text-[var(--ink)]">密码</span>
             <input
               name="password"
               type="password"
               required
               minLength={8}
               className="field"
-              placeholder="At least 8 characters"
+              placeholder="至少 8 位字符"
             />
           </label>
         </>
@@ -248,7 +248,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
               href={feedback.verificationUrl}
               className="mt-2 inline-flex break-all font-semibold text-[var(--accent-strong)]"
             >
-              Open verification link
+              打开验证链接
             </a>
           ) : null}
           {canResendVerification && feedback.email ? (
@@ -261,7 +261,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
               disabled={isResending || isPending}
             >
               {isResending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-              Resend verification email
+              重新发送验证邮件
             </button>
           ) : null}
         </div>
@@ -272,7 +272,7 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
         disabled={isPending}
       >
         {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        {mode === "login" ? (twoFactorEmail ? "Verify code" : "Sign in") : "Create account"}
+        {mode === "login" ? (twoFactorEmail ? "验证验证码" : "登录") : "创建账号"}
       </button>
       {mode === "login" && twoFactorEmail ? (
         <button
@@ -283,12 +283,12 @@ export function AuthForm({ mode, nextPath = "/admin" }: AuthFormProps) {
           }}
           disabled={isPending || isResending}
         >
-          Use a different account
+          换一个账号
         </button>
       ) : null}
       {mode === "register" ? (
         <p className="text-xs leading-6 text-[var(--ink-soft)]">
-          New reader accounts need email verification before they can sign in and comment.
+          新注册账号需要先完成邮箱验证，之后才能登录和参与评论。
         </p>
       ) : null}
     </form>

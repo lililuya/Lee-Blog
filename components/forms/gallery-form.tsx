@@ -68,7 +68,7 @@ function buildAltFromFileName(fileName: string) {
     .replace(/\s+/g, " ")
     .trim();
 
-  return normalized || "Gallery image";
+  return normalized || "画廊图片";
 }
 
 function isImageDraftEmpty(image: GalleryImageDraft) {
@@ -229,7 +229,7 @@ export function GalleryForm({
     if (files.length === 0) {
       setUploadPhase("error");
       setUploadProgress(0);
-      setUploadMessage("Select one or more images first.");
+      setUploadMessage("请先选择一张或多张图片。");
       return;
     }
 
@@ -267,7 +267,7 @@ export function GalleryForm({
         resolve({
           ok: false,
           status: xhr.status,
-          error: "The upload was interrupted by a network error.",
+          error: "上传过程中发生网络错误，已中断。",
         });
       };
 
@@ -307,8 +307,8 @@ export function GalleryForm({
       setUploadMessage(
         response.error ??
           (response.parseError
-            ? "The server returned an unexpected upload response."
-            : "The selected images could not be uploaded."),
+            ? "服务器返回了无法识别的上传响应。"
+            : "所选图片无法上传。"),
       );
       return;
     }
@@ -338,7 +338,7 @@ export function GalleryForm({
 
     setUploadPhase("done");
     setUploadProgress(100);
-    setUploadMessage(`${response.assets.length} image(s) uploaded and appended to the album draft.`);
+    setUploadMessage(`已上传 ${response.assets.length} 张图片，并追加到当前相册草稿中。`);
   }
 
   return (
@@ -352,12 +352,12 @@ export function GalleryForm({
 
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Album title</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">相册标题</span>
           <input
             name="title"
             defaultValue={gallery?.title}
             className="field"
-            placeholder="For example: Spring field notes from Suzhou and Hangzhou"
+            placeholder="例如：苏州与杭州的春日田野记录"
           />
         </label>
 
@@ -367,53 +367,53 @@ export function GalleryForm({
             name="slug"
             defaultValue={gallery?.slug}
             className="field"
-            placeholder="Leave empty to generate from the title"
+            placeholder="留空则根据标题自动生成"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Tags</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">标签</span>
           <input
             name="tags"
             defaultValue={gallery?.tags.join(", ")}
             className="field"
-            placeholder="street, travel, archive"
+            placeholder="例如：street, travel, archive"
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Summary</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">摘要</span>
           <textarea
             name="summary"
             defaultValue={gallery?.summary}
             rows={3}
             className="field min-h-24 resize-y"
-            placeholder="A short introduction for gallery cards and list pages."
+            placeholder="给相册卡片和列表页用的一段简短介绍。"
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Description</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">详细说明</span>
           <textarea
             name="description"
             defaultValue={gallery?.description}
             rows={7}
             className="field min-h-48 resize-y"
-            placeholder="Describe the context, curation logic, location, mood, or story behind this album."
+            placeholder="介绍这个相册的背景、编排逻辑、地点、氛围或背后的故事。"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Status</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">状态</span>
           <select name="status" className="field" defaultValue={gallery?.status ?? PostStatus.DRAFT}>
-            <option value={PostStatus.DRAFT}>Draft</option>
-            <option value={PostStatus.PUBLISHED}>Published</option>
-            <option value={PostStatus.ARCHIVED}>Archived</option>
+            <option value={PostStatus.DRAFT}>草稿</option>
+            <option value={PostStatus.PUBLISHED}>已发布</option>
+            <option value={PostStatus.ARCHIVED}>已归档</option>
           </select>
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Published At</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">发布时间</span>
           <input
             name="publishedAt"
             type="datetime-local"
@@ -423,12 +423,12 @@ export function GalleryForm({
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Cover image URL</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">封面图 URL</span>
           <input
             name="coverImageUrl"
             defaultValue={gallery?.coverImageUrl ?? ""}
             className="field"
-            placeholder="Leave empty to use the first image in this album"
+            placeholder="留空则默认使用当前相册的第一张图片"
           />
         </label>
       </div>
@@ -436,18 +436,17 @@ export function GalleryForm({
       <section className="space-y-4 rounded-[1.8rem] border border-black/8 bg-[rgba(255,255,255,0.48)] p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="section-kicker">Images</p>
-            <h2 className="font-serif text-3xl font-semibold tracking-tight">Album images</h2>
+            <p className="section-kicker">图片</p>
+            <h2 className="font-serif text-3xl font-semibold tracking-tight">相册图片</h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--ink-soft)]">
-              Add one image row per photo. The list order becomes the gallery reading order and the first
-              image can act as the default cover.
+              每张照片对应一行图片记录。列表顺序会成为相册的展示顺序，第一张图也可以作为默认封面。
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <button type="button" className="btn-secondary self-start md:self-auto" onClick={addImage}>
               <ImagePlus className="h-4 w-4" />
-              Add row
+              新增一行
             </button>
           </div>
         </div>
@@ -455,16 +454,15 @@ export function GalleryForm({
         <div className="rounded-[1.5rem] border border-[rgba(20,33,43,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
           <div className="grid gap-2 text-sm leading-7 text-[var(--ink-soft)]">
             <p>
-              <span className="font-semibold text-[var(--ink)]">Required:</span> each gallery must include
-              at least one image.
+              <span className="font-semibold text-[var(--ink)]">必填：</span>每个相册至少要包含一张图片。
             </p>
             <p>
-              <span className="font-semibold text-[var(--ink)]">Image rows:</span> every non-empty row must
-              include an image URL, either pasted manually or added through the uploader below.
+              <span className="font-semibold text-[var(--ink)]">图片行：</span>每一行只要填写了其他内容，就必须包含图片 URL，
+              可以手动粘贴，也可以通过下方上传器添加。
             </p>
             <p>
-              <span className="font-semibold text-[var(--ink)]">Upload limits:</span> PNG, JPG/JPEG, and
-              WEBP are supported, up to {uploadLimits.imageMaxUploadLabel} per image.
+              <span className="font-semibold text-[var(--ink)]">上传限制：</span>支持 PNG、JPG/JPEG 和 WEBP，
+              单张图片最大 {uploadLimits.imageMaxUploadLabel}。
             </p>
           </div>
         </div>
@@ -472,7 +470,7 @@ export function GalleryForm({
         <div className="rounded-[1.5rem] border border-[rgba(27,107,99,0.14)] bg-[rgba(27,107,99,0.06)] p-4">
           <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
             <label className="space-y-2">
-              <span className="text-sm font-semibold text-[var(--ink)]">Upload images directly</span>
+              <span className="text-sm font-semibold text-[var(--ink)]">直接上传图片</span>
               <input
                 ref={uploadInputRef}
                 type="file"
@@ -481,9 +479,8 @@ export function GalleryForm({
                 className="field file:mr-4 file:rounded-full file:border-0 file:bg-[rgba(27,107,99,0.12)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--accent-strong)]"
               />
               <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                PNG, JPG/JPEG, and WEBP uploads can be up to {uploadLimits.imageMaxUploadLabel} each.
-                Uploaded files are stored under <code>/uploads/site</code> and appended into the draft list
-                below.
+                PNG、JPG/JPEG 和 WEBP 文件单张最大 {uploadLimits.imageMaxUploadLabel}。
+                上传成功后，文件会保存到当前配置的媒体存储中，并自动追加到下方草稿列表。
               </p>
             </label>
 
@@ -498,7 +495,7 @@ export function GalleryForm({
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              {uploadPhase === "uploading" ? "Uploading..." : "Upload selected"}
+              {uploadPhase === "uploading" ? "上传中..." : "上传所选图片"}
             </button>
           </div>
 
@@ -511,7 +508,7 @@ export function GalleryForm({
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span>{uploadMessage ?? "Uploading gallery images..."}</span>
+                <span>{uploadMessage ?? "正在上传相册图片..."}</span>
                 {uploadPhase === "uploading" ? <span>{Math.round(uploadProgress)}%</span> : null}
               </div>
               {uploadPhase === "uploading" ? (
@@ -529,14 +526,14 @@ export function GalleryForm({
         {!canSubmit ? (
           <div className="rounded-[1.4rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-7 text-rose-700">
             {invalidImageUrlCount > 0
-              ? `${invalidImageUrlCount} image row(s) use an unsupported URL format. Use either a full URL or a root-relative path like /uploads/site/example.jpg.`
+              ? `${invalidImageUrlCount} 行图片使用了不支持的 URL 格式。请使用完整 URL，或像 /uploads/site/example.jpg 这样的站点根路径。`
               : validImageCount === 0
-              ? "At least one image is required before this gallery can be saved."
-              : `${incompleteImageCount} image row(s) still need an Image URL before you can save this gallery.`}
+              ? "保存相册前，至少需要一张图片。"
+              : `还有 ${incompleteImageCount} 行图片缺少图片 URL，暂时无法保存相册。`}
           </div>
         ) : (
           <div className="rounded-[1.4rem] border border-[rgba(27,107,99,0.16)] bg-[rgba(27,107,99,0.08)] px-4 py-3 text-sm leading-7 text-[var(--ink-soft)]">
-            {validImageCount} image(s) ready for this gallery.
+            当前已有 {validImageCount} 张图片可用于这个相册。
           </div>
         )}
 
@@ -552,10 +549,11 @@ export function GalleryForm({
                 <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
-                      Image {index + 1}
+                      图片 {index + 1}
                     </div>
                     <p className="mt-1 text-xs leading-6 text-[var(--ink-soft)]">
-                      Use root-relative URLs like <code>/uploads/site/example.jpg</code> or external image links.
+                      可使用已上传媒体 URL、像 <code>/uploads/site/example.jpg</code> 这样的站点根路径，
+                      或任意外部图片链接。
                     </p>
                   </div>
 
@@ -567,7 +565,7 @@ export function GalleryForm({
                       disabled={index === 0}
                     >
                       <ArrowUp className="h-4 w-4" />
-                      Up
+                      上移
                     </button>
                     <button
                       type="button"
@@ -576,7 +574,7 @@ export function GalleryForm({
                       disabled={index === images.length - 1}
                     >
                       <ArrowDown className="h-4 w-4" />
-                      Down
+                      下移
                     </button>
                     <button
                       type="button"
@@ -584,7 +582,7 @@ export function GalleryForm({
                       onClick={() => removeImage(index)}
                     >
                       <Trash2 className="h-4 w-4" />
-                      Remove
+                      删除
                     </button>
                   </div>
                 </div>
@@ -593,7 +591,7 @@ export function GalleryForm({
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="space-y-2 md:col-span-2">
                       <span className="text-sm font-semibold text-[var(--ink)]">
-                        Image URL <span className="text-rose-600">*</span>
+                        图片 URL <span className="text-rose-600">*</span>
                       </span>
                       <input
                         value={image.imageUrl}
@@ -613,46 +611,46 @@ export function GalleryForm({
                         }`}
                       >
                         {isMissingRequiredImage
-                          ? "This row has content but no image URL yet."
+                          ? "这一行已经填写了内容，但还没有图片 URL。"
                           : hasInvalidImageUrl
-                            ? "Use either a full URL or a root-relative path like /uploads/site/example.jpg."
-                            : "Required for every non-empty image row. Root-relative URLs like /uploads/site/example.jpg are also supported."}
+                            ? "请使用完整 URL，或像 /uploads/site/example.jpg 这样的站点根路径。"
+                            : "每一行只要不是空白行，就必须填写图片 URL。支持已上传媒体 URL 和站点根路径。"}
                       </p>
                     </label>
 
                     <label className="space-y-2 md:col-span-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Alt text</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">替代文本</span>
                       <input
                         value={image.alt}
                         onChange={(event) => updateImage(index, "alt", event.target.value)}
                         className="field"
-                        placeholder="Describe the image clearly for accessibility."
+                        placeholder="请用清楚的文字描述图片，方便无障碍阅读。"
                       />
                     </label>
 
                     <label className="space-y-2 md:col-span-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Caption</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">图注</span>
                       <textarea
                         value={image.caption}
                         onChange={(event) => updateImage(index, "caption", event.target.value)}
                         rows={3}
                         className="field min-h-24 resize-y"
-                        placeholder="Optional caption or note shown under the image."
+                        placeholder="可选的图注或补充说明，会显示在图片下方。"
                       />
                     </label>
 
                     <label className="space-y-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Thumbnail URL</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">缩略图 URL</span>
                       <input
                         value={image.thumbUrl}
                         onChange={(event) => updateImage(index, "thumbUrl", event.target.value)}
                         className="field"
-                        placeholder="Optional lighter thumbnail"
+                        placeholder="可选的轻量缩略图地址"
                       />
                     </label>
 
                     <label className="space-y-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Shot at</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">拍摄时间</span>
                       <input
                         value={image.shotAt}
                         onChange={(event) => updateImage(index, "shotAt", event.target.value)}
@@ -662,7 +660,7 @@ export function GalleryForm({
                     </label>
 
                     <label className="space-y-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Width</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">宽度</span>
                       <input
                         value={image.width}
                         onChange={(event) => updateImage(index, "width", event.target.value)}
@@ -674,7 +672,7 @@ export function GalleryForm({
                     </label>
 
                     <label className="space-y-2">
-                      <span className="text-sm font-semibold text-[var(--ink)]">Height</span>
+                      <span className="text-sm font-semibold text-[var(--ink)]">高度</span>
                       <input
                         value={image.height}
                         onChange={(event) => updateImage(index, "height", event.target.value)}
@@ -687,7 +685,7 @@ export function GalleryForm({
                   </div>
 
                   <div className="space-y-3">
-                    <span className="text-sm font-semibold text-[var(--ink)]">Preview</span>
+                    <span className="text-sm font-semibold text-[var(--ink)]">预览</span>
                     <div className="overflow-hidden rounded-[1.4rem] border border-black/8 bg-[rgba(20,33,43,0.04)]">
                       {hasPreview ? (
                         <div
@@ -696,12 +694,12 @@ export function GalleryForm({
                         />
                       ) : (
                         <div className="flex aspect-[4/3] items-center justify-center px-6 text-center text-sm leading-7 text-[var(--ink-soft)]">
-                          Paste an image URL to preview it here.
+                          粘贴图片 URL 后，这里会显示预览。
                         </div>
                       )}
                     </div>
                     <p className="text-xs leading-6 text-[var(--ink-soft)]">
-                      This preview is for curation only. Public pages will render the original image and its caption.
+                      这里的预览仅用于整理内容。公开页面仍会渲染原始图片和对应图注。
                     </p>
                   </div>
                 </div>
@@ -720,13 +718,12 @@ export function GalleryForm({
               defaultChecked={gallery?.featured}
               className="h-4 w-4 accent-[var(--accent)]"
             />
-            Feature this album
+            标记为精选相册
           </label>
         </div>
 
         <p className="text-xs leading-6 text-[var(--ink-soft)]">
-          Featured albums can be highlighted on listing pages later. If no cover image is set manually,
-          the first gallery image becomes the default cover automatically.
+          精选相册后续可以在列表页中高亮展示。如果没有手动设置封面图，系统会自动把第一张图片作为默认封面。
         </p>
       </div>
 

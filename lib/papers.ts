@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { getCanonicalArxivId } from "@/lib/citation-cards";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/utils";
 
@@ -45,6 +46,14 @@ function extractArxivId(idUrl: string) {
   return match?.[1] ?? idUrl;
 }
 
+function normalizeAnchorPart(value: string | null | undefined) {
+  return (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function toDigestDateString(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: SHANGHAI_TIMEZONE,
@@ -56,6 +65,32 @@ function toDigestDateString(now = new Date()) {
 
 export function getDigestDate(now = new Date()) {
   return new Date(`${toDigestDateString(now)}T00:00:00+08:00`);
+}
+
+export function getPaperAnchorId(input: {
+  arxivId: string;
+  id?: string | null;
+  topicId?: string | null;
+  digestDate?: Date | string | null;
+}) {
+  const arxivPart = normalizeAnchorPart(input.arxivId) || "entry";
+  const idPart = normalizeAnchorPart(input.id);
+  const topicPart = normalizeAnchorPart(input.topicId);
+  const digestPart = input.digestDate
+    ? normalizeAnchorPart(
+        input.digestDate instanceof Date
+          ? input.digestDate.toISOString().slice(0, 10)
+          : String(input.digestDate).slice(0, 10),
+      )
+    : "";
+  const suffix = idPart || [topicPart, digestPart].filter(Boolean).join("-");
+
+  return suffix ? `paper-${arxivPart}-${suffix}` : `paper-${arxivPart}`;
+}
+
+export function getPaperReadingListAnchorId(arxivId: string) {
+  const arxivPart = normalizeAnchorPart(getCanonicalArxivId(arxivId) ?? arxivId) || "paper";
+  return `reading-paper-${arxivPart}`;
 }
 
 export async function fetchArxivPapersForTopic(topic: PaperTopicShape) {

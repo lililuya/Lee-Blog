@@ -49,8 +49,8 @@ jobs:
       - name: Push database schema
         run: npm run db:push
 
-      - name: Seed demo data
-        run: npm run db:seed
+      - name: Bootstrap database
+        run: npm run db:bootstrap
 
       - name: Lint
         run: npm run lint

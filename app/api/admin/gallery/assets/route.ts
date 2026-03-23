@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { deleteLocalSiteAsset, SiteAssetUploadError, storeSiteImageUpload } from "@/lib/site-assets";
+import { deleteMediaAsset, type StoredMediaAsset } from "@/lib/media-storage";
+import { SiteAssetUploadError, storeSiteImageUpload } from "@/lib/site-assets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,18 +40,19 @@ export async function POST(request: Request) {
     return buildErrorResponse("Please select at least one image to upload.", 400);
   }
 
-  const uploadedAssets: Array<{ url: string; originalName: string }> = [];
+  const uploadedAssets: Array<StoredMediaAsset & { originalName: string }> = [];
 
   try {
     for (const file of files) {
       const uploaded = await storeSiteImageUpload(file, "gallery");
       uploadedAssets.push({
+        ...uploaded,
         url: uploaded.url,
         originalName: file.name,
       });
     }
   } catch (error) {
-    await Promise.all(uploadedAssets.map((asset) => deleteLocalSiteAsset(asset.url)));
+    await Promise.all(uploadedAssets.map((asset) => deleteMediaAsset(asset)));
 
     if (error instanceof SiteAssetUploadError) {
       return buildErrorResponse(error.message, 400);
@@ -62,6 +64,9 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    assets: uploadedAssets,
+    assets: uploadedAssets.map((asset) => ({
+      url: asset.url,
+      originalName: asset.originalName,
+    })),
   });
 }

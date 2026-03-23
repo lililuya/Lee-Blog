@@ -1,98 +1,135 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarRange, FileStack, ScrollText } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { JsonLd } from "@/components/site/json-ld";
 import { SectionHeading } from "@/components/site/section-heading";
+import {
+  buildCollectionPageJsonLd,
+  buildContentMetadata,
+  buildItemListJsonLd,
+} from "@/lib/content-seo";
 import { getWeeklyDigests } from "@/lib/queries";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getContentStats } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = buildContentMetadata({
+  title: "每周研究周报",
+  description:
+    "把论文、日志和站内写作整合起来的每周公开研究周报。",
+  path: "/digest",
+  keywords: ["每周周报", "研究周报", "论文", "每周笔记"],
+  section: "周报",
+  type: "website",
+  ogEyebrow: "周报",
+});
+
 export default async function DigestPage() {
   const digests = await getWeeklyDigests(18);
+  const collectionJsonLd = buildCollectionPageJsonLd({
+    name: "Lee 博客每周周报",
+    description:
+      "把论文、笔记和文章整合在一起的每周研究周报归档。",
+    path: "/digest",
+    itemCount: digests.length,
+    keywords: ["每周周报", "研究周报", "论文", "每周笔记"],
+  });
+  const itemListJsonLd = buildItemListJsonLd({
+    name: "每周周报列表",
+    path: "/digest",
+    items: digests.map((digest) => ({
+      name: digest.title,
+      path: `/digest/${digest.slug}`,
+    })),
+  });
 
   return (
     <div className="container-shell py-16">
-      <div className="space-y-10">
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd data={itemListJsonLd} />
+
+      <div className="editorial-shell space-y-10">
         <SectionHeading
-          kicker="Weekly Digest"
-          title="每周研究简报"
-          description="把站内一周的论文同步、日志记录和正式文章整理成一份公开可回看的研究周报，方便你自己复盘，也方便访客快速理解最近的工作重点。"
+          kicker="每周周报"
+          title="每周研究回顾"
+          description="按周连续归档，把论文、研究日志和已发布内容整理成更紧凑的一份公开研究简报。"
         />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="outline-card rounded-[1.8rem] p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-              已生成周报
-            </p>
-            <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">{digests.length}</p>
-            <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              每份周报都会归档为独立详情页，方便长期回看。
-            </p>
-          </div>
-          <div className="outline-card rounded-[1.8rem] p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-              信息来源
-            </p>
-            <p className="mt-4 font-serif text-3xl font-semibold tracking-tight">
-              论文 + 日志 + 文章
-            </p>
-            <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              把输入、过程和输出放到同一份摘要里，更利于运营与知识沉淀。
-            </p>
-          </div>
-          <div className="outline-card rounded-[1.8rem] p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
-              推荐节奏
-            </p>
-            <p className="mt-4 font-serif text-5xl font-semibold tracking-tight">周一 08:00</p>
-            <p className="mt-3 text-sm leading-7 text-[var(--ink-soft)]">
-              推荐在 Asia/Shanghai 时区每周一早上生成上一周的研究简报。
-            </p>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-[var(--ink-soft)]">
+          <p>归档中共有 {digests.length} 期已发布周报。</p>
+          <Link
+            href="/archive"
+            className="inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)]"
+          >
+            浏览完整归档
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
         </div>
 
         {digests.length > 0 ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-            {digests.map((digest) => (
-              <article key={digest.id} className="glass-card rounded-[2rem] p-6">
-                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
-                  <span className="badge-soft">Weekly Digest</span>
-                  <span className="inline-flex items-center gap-2">
-                    <CalendarRange className="h-4 w-4" />
-                    {formatDate(digest.periodStart, "yyyy-MM-dd")} - {formatDate(digest.periodEnd, "yyyy-MM-dd")}
-                  </span>
-                </div>
-                <h2 className="mt-5 font-serif text-3xl font-semibold tracking-tight">
-                  {digest.title}
-                </h2>
-                <p className="mt-4 text-sm leading-8 text-[var(--ink-soft)]">{digest.summary}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {digest.highlights.slice(0, 3).map((highlight) => (
-                    <span
-                      key={highlight}
-                      className="rounded-full border border-black/8 bg-white/70 px-3 py-2 text-xs text-[var(--ink-soft)]"
-                    >
-                      {highlight}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-6 flex flex-wrap gap-3 text-sm text-[var(--ink-soft)]">
-                  <span className="inline-flex items-center gap-2">
-                    <FileStack className="h-4 w-4" />
-                    论文 {digest.paperCount} 篇
-                  </span>
-                  <span>日志 {digest.journalCount} 条</span>
-                  <span>文章 {digest.postCount} 篇</span>
-                </div>
-                <Link href={`/digest/${digest.slug}`} className="btn-secondary mt-6">
-                  <ScrollText className="h-4 w-4" />
-                  阅读完整周报
-                </Link>
-              </article>
-            ))}
+          <div className="editorial-list">
+            {digests.map((digest) => {
+              const stats = getContentStats(digest.content ?? `${digest.title} ${digest.summary}`);
+
+              return (
+                <article key={digest.id} className="editorial-list-item group">
+                  <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_12rem] lg:items-end">
+                    <div className="space-y-5">
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+                        <span className="rounded-full bg-[rgba(27,107,99,0.08)] px-3 py-1 text-[0.72rem] text-[var(--accent-strong)]">
+                          每周周报
+                        </span>
+                        <span>
+                          {formatDate(digest.periodStart, "yyyy-MM-dd")} -{" "}
+                          {formatDate(digest.periodEnd, "yyyy-MM-dd")}
+                        </span>
+                        <span>{stats.estimatedMinutes} 分钟阅读</span>
+                        <span>{stats.characterCount.toLocaleString("zh-CN")} 字</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h2 className="font-serif font-semibold tracking-tight text-[var(--ink)] text-[clamp(1.5rem,2.6vw,2.05rem)] leading-[1.08]">
+                          <Link href={`/digest/${digest.slug}`} className="transition hover:text-[var(--accent-strong)]">
+                            {digest.title}
+                          </Link>
+                        </h2>
+                        <p className="max-w-3xl text-base leading-8 text-[var(--ink-soft)]">
+                          {digest.summary}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--ink-soft)]">
+                        <span>论文 {digest.paperCount}</span>
+                        <span>日志 {digest.journalCount}</span>
+                        <span>文章 {digest.postCount}</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {digest.highlights.slice(0, 4).map((highlight) => (
+                          <span
+                            key={highlight}
+                            className="rounded-full border border-black/8 px-3 py-1.5 text-xs font-medium text-[var(--ink-soft)]"
+                          >
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-end lg:justify-end">
+                      <Link href={`/digest/${digest.slug}`} className="section-link-pill section-link-pill--compact">
+                        <span>阅读周报</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
-          <div className="glass-card rounded-[2rem] p-8 text-sm leading-8 text-[var(--ink-soft)]">
-            目前还没有生成任何周报。你可以先在后台的“每周简报”模块手动生成一份，或者配置每周一 08:00 的自动任务。
+          <div className="editorial-panel p-8 text-sm leading-8 text-[var(--ink-soft)]">
+            目前还没有每周周报。等你准备好发布阶段性总结后，可以在后台生成一份。
           </div>
         )}
       </div>

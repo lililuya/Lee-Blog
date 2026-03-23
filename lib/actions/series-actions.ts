@@ -63,7 +63,7 @@ export async function createContentSeriesAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.SERIES_SAVED,
-        summary: `Created content series "${createdSeries.title}".`,
+        summary: `已创建内容系列“${createdSeries.title}”。`,
         actorId: admin.id,
         metadata: {
           seriesId: createdSeries.id,
@@ -114,7 +114,7 @@ export async function updateContentSeriesAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.SERIES_SAVED,
-        summary: `Updated content series "${updatedSeries.title}".`,
+        summary: `已更新内容系列“${updatedSeries.title}”。`,
         actorId: admin.id,
         metadata: {
           seriesId: updatedSeries.id,
@@ -145,7 +145,7 @@ export async function deleteContentSeriesAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.SERIES_DELETED,
-        summary: `Deleted content series "${deletedSeries.title}".`,
+        summary: `已删除内容系列“${deletedSeries.title}”。`,
         actorId: admin.id,
         metadata: {
           seriesId: deletedSeries.id,

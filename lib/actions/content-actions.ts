@@ -9,6 +9,7 @@ import { saveAdminProfileFromFormData } from "@/lib/admin-profile";
 import { ADMIN_AUDIT_ACTIONS, buildAdminAuditLogData } from "@/lib/audit";
 import { buildLoginSecurityContext } from "@/lib/auth-security";
 import { resolveCommentAuthorIdentity } from "@/lib/comment-identity";
+import { verifyCommentHumanCheck } from "@/lib/comment-human-check";
 import { evaluateCommentModeration } from "@/lib/comment-moderation";
 import {
   notifyAdminsOfNewComment,
@@ -28,6 +29,7 @@ import {
   notifyCommentAuthorOfReviewInApp,
   notifyUserOfApprovedReplyInApp,
 } from "@/lib/user-notifications";
+import { formatCommentStatusLabel } from "@/lib/ui-labels";
 import { isUserMuted } from "@/lib/user-state";
 import { estimateReadingTime, isDatabaseConfigured, parseCsv, slugify } from "@/lib/utils";
 import {
@@ -41,6 +43,9 @@ import {
   postRevisionRestoreSchema,
   providerSchema,
 } from "@/lib/validators";
+import { DEFAULT_CONTENT_LANGUAGE } from "@/lib/content-language";
+
+type PostWriteClient = Pick<typeof prisma, "post">;
 
 function getString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
@@ -116,11 +121,40 @@ async function safeRunPostNotification(label: string, task: () => Promise<unknow
   }
 }
 
+async function resolvePostTranslationOfId(
+  tx: PostWriteClient,
+  translationOfId: string | null | undefined,
+  currentPostId?: string | null,
+) {
+  const normalizedId = translationOfId?.trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  const target = await tx.post.findUnique({
+    where: { id: normalizedId },
+    select: {
+      id: true,
+      translationOfId: true,
+    },
+  });
+
+  const rootId = target?.translationOfId ?? target?.id ?? null;
+
+  if (!rootId || rootId === currentPostId) {
+    return null;
+  }
+
+  return rootId;
+}
+
 const COMMENT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const COMMENT_RATE_LIMIT_MAX = 3;
 const COMMENT_DAILY_MAX = 12;
 const COMMENT_DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const COMMENT_MAX_URLS = 2;
+const COMMENT_MIN_FORM_AGE_MS = 1200;
 const COMMENT_SPAM_TOKENS = [
   "telegram",
   "whatsapp",
@@ -196,6 +230,7 @@ export async function createPostAction(formData: FormData) {
     excerpt: getString(formData, "excerpt"),
     content: getString(formData, "content"),
     category: getString(formData, "category"),
+    language: getString(formData, "language") || DEFAULT_CONTENT_LANGUAGE,
     tags: parseCsv(getString(formData, "tags")),
     status: getString(formData, "status"),
     pinned: getBoolean(formData, "pinned"),
@@ -203,6 +238,7 @@ export async function createPostAction(formData: FormData) {
     coverImageUrl: getOptionalString(formData, "coverImageUrl"),
     seriesId: getOptionalString(formData, "seriesId"),
     seriesOrder: getNumberOrNull(formData, "seriesOrder"),
+    translationOfId: getOptionalString(formData, "translationOfId"),
     publishedAt: getDateOrNull(formData, "publishedAt"),
   });
 
@@ -219,12 +255,15 @@ export async function createPostAction(formData: FormData) {
       });
     }
 
+    const translationOfId = await resolvePostTranslationOfId(tx, parsed.translationOfId);
+
     const createdPost = await tx.post.create({
       data: {
         ...parsed,
         coverImageUrl: parsed.coverImageUrl || null,
         seriesId: parsed.seriesId || null,
         seriesOrder: parsed.seriesId ? parsed.seriesOrder ?? null : null,
+        translationOfId,
         publishedAt:
           parsed.status === PostStatus.PUBLISHED ? parsed.publishedAt ?? new Date() : null,
         readTimeMinutes: estimateReadingTime(parsed.content),
@@ -281,6 +320,7 @@ export async function updatePostAction(formData: FormData) {
     excerpt: getString(formData, "excerpt"),
     content: getString(formData, "content"),
     category: getString(formData, "category"),
+    language: getString(formData, "language") || DEFAULT_CONTENT_LANGUAGE,
     tags: parseCsv(getString(formData, "tags")),
     status: getString(formData, "status"),
     pinned: getBoolean(formData, "pinned"),
@@ -288,6 +328,7 @@ export async function updatePostAction(formData: FormData) {
     coverImageUrl: getOptionalString(formData, "coverImageUrl"),
     seriesId: getOptionalString(formData, "seriesId"),
     seriesOrder: getNumberOrNull(formData, "seriesOrder"),
+    translationOfId: getOptionalString(formData, "translationOfId"),
     publishedAt: getDateOrNull(formData, "publishedAt"),
   });
 
@@ -305,6 +346,8 @@ export async function updatePostAction(formData: FormData) {
       });
     }
 
+    const translationOfId = await resolvePostTranslationOfId(tx, parsed.translationOfId, postId);
+
     const updatedPost = await tx.post.update({
       where: { id: postId },
       data: {
@@ -312,6 +355,7 @@ export async function updatePostAction(formData: FormData) {
         coverImageUrl: parsed.coverImageUrl || null,
         seriesId: parsed.seriesId || null,
         seriesOrder: parsed.seriesId ? parsed.seriesOrder ?? null : null,
+        translationOfId,
         publishedAt:
           parsed.status === PostStatus.PUBLISHED ? parsed.publishedAt ?? new Date() : null,
         readTimeMinutes: estimateReadingTime(parsed.content),
@@ -400,6 +444,11 @@ export async function restorePostRevisionAction(formData: FormData) {
             select: { id: true },
           })
         : null;
+    const translationOfId = await resolvePostTranslationOfId(
+      tx,
+      revision.translationOfId,
+      parsed.postId,
+    );
 
     const post = await tx.post.update({
       where: { id: parsed.postId },
@@ -409,6 +458,7 @@ export async function restorePostRevisionAction(formData: FormData) {
         excerpt: revision.excerpt,
         content: revision.content,
         category: revision.category,
+        language: revision.language,
         tags: revision.tags,
         status: revision.status,
         pinned: revision.pinned,
@@ -417,6 +467,7 @@ export async function restorePostRevisionAction(formData: FormData) {
         readTimeMinutes: revision.readTimeMinutes,
         seriesId: targetSeries?.id ?? null,
         seriesOrder: targetSeries?.id ? revision.seriesOrder ?? null : null,
+        translationOfId,
         publishedAt: revision.publishedAt,
       },
     });
@@ -429,7 +480,7 @@ export async function restorePostRevisionAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.POST_REVISION_RESTORED,
-        summary: `Restored post "${post.title}" to revision v${revision.version}.`,
+        summary: `已将文章“${post.title}”恢复到版本 v${revision.version}。`,
         actorId: admin.id,
         targetUserId: post.authorId,
         metadata: {
@@ -628,7 +679,7 @@ export async function restoreNoteRevisionAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.NOTE_REVISION_RESTORED,
-        summary: `Restored note "${note.title}" to revision v${revision.version}.`,
+        summary: `已将笔记“${note.title}”恢复到版本 v${revision.version}。`,
         actorId: admin.id,
         targetUserId: note.authorId,
         metadata: {
@@ -857,7 +908,7 @@ export async function moderateCommentAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_MODERATED,
-        summary: `Set comment by ${getCommentAuditLabel(comment)} on "${comment.post.title}" to ${parsed.status}.`,
+        summary: `已将《${comment.post.title}》下 ${getCommentAuditLabel(comment)} 的评论状态改为 ${formatCommentStatusLabel(parsed.status)}。`,
         actorId: admin.id,
         targetUserId: comment.authorId ?? null,
         metadata: {
@@ -1046,7 +1097,7 @@ export async function deleteCommentAction(formData: FormData) {
     await tx.adminAuditLog.create({
       data: buildAdminAuditLogData({
         action: ADMIN_AUDIT_ACTIONS.COMMENT_DELETED,
-        summary: `Deleted comment by ${getCommentAuditLabel(comment)} on "${comment.post.title}".`,
+        summary: `已删除《${comment.post.title}》下 ${getCommentAuditLabel(comment)} 的评论。`,
         actorId: admin.id,
         targetUserId: comment.authorId ?? null,
         metadata: {
@@ -1077,6 +1128,8 @@ export async function createCommentAction(formData: FormData) {
   const postId = getString(formData, "postId");
   const postSlug = getString(formData, "postSlug");
   const honeypotValue = getString(formData, "website");
+  const formStartedAtValue = getString(formData, "formStartedAt");
+  const humanCheckToken = getString(formData, "humanCheckToken");
   const parsed = commentSchema.safeParse({
     postId,
     parentId: getOptionalString(formData, "parentId"),
@@ -1186,8 +1239,29 @@ export async function createCommentAction(formData: FormData) {
       redirectToCommentFeedback(postSlug, "spam-blocked");
     }
 
+    if (formStartedAtValue) {
+      const formStartedAt = Number(formStartedAtValue);
+
+      if (
+        Number.isFinite(formStartedAt) &&
+        Date.now() - formStartedAt < COMMENT_MIN_FORM_AGE_MS
+      ) {
+        redirectToCommentFeedback(postSlug, "submitted-too-fast");
+      }
+    }
+
     const securityContext = await getCommentRequestSecurityContext();
     submittedIpHash = guestFingerprintSupported ? securityContext.ipHash ?? null : null;
+
+    const humanCheckResult = await verifyCommentHumanCheck({
+      token: humanCheckToken,
+      ipAddress: securityContext.ipAddress,
+    });
+
+    if (humanCheckResult.enabled && !humanCheckResult.success) {
+      redirectToCommentFeedback(postSlug, "human-check");
+    }
+
     const now = Date.now();
     const rateLimitMatchers = [
       ...(guestFingerprintSupported && submittedIpHash ? [{ submittedIpHash }] : []),

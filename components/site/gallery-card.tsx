@@ -25,8 +25,8 @@ type GalleryCardProps = {
 
 export function GalleryCard({ album }: GalleryCardProps) {
   const coverUrl = album.coverImageUrl || album.images?.[0]?.imageUrl || null;
-  const title = album.title || "Untitled gallery";
-  const summary = album.summary || "This gallery is published without a summary yet.";
+  const title = album.title || "未命名图集";
+  const summary = album.summary || "这组图集暂时还没有摘要说明。";
 
   return (
     <article className="glass-card group overflow-hidden rounded-[2rem] transition duration-300 hover:-translate-y-1 hover:border-[var(--border-strong)]">
@@ -38,19 +38,19 @@ export function GalleryCard({ album }: GalleryCardProps) {
           />
         ) : (
           <div className="flex min-h-[14rem] items-center justify-center text-sm font-semibold text-[var(--ink-soft)]">
-            Gallery cover pending
+            暂无图集封面
           </div>
         )}
 
         <div className="absolute inset-x-4 top-4 flex flex-wrap items-center gap-2">
           <span className="badge-soft bg-[rgba(255,255,255,0.84)] text-[var(--ink)]">
             <Images className="h-3.5 w-3.5" />
-            {album._count.images} images
+            {album._count.images} 张图片
           </span>
           {album.featured ? (
             <span className="badge-soft bg-[rgba(27,107,99,0.88)] text-white">
               <Sparkles className="h-3.5 w-3.5" />
-              Featured
+              精选
             </span>
           ) : null}
         </div>
@@ -71,10 +71,10 @@ export function GalleryCard({ album }: GalleryCardProps) {
 
         <div className="flex items-center justify-between gap-4">
           <div className="text-sm text-[var(--ink-soft)]">
-            Curated visual collection with a dedicated detail page.
+            一组适合按顺序阅读的视觉内容，附带独立详情页。
           </div>
           <Link href={`/gallery/${album.slug}`} className="section-link-pill section-link-pill--compact">
-            Open gallery
+            打开图集
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>

@@ -1,19 +1,38 @@
 import { PostForm } from "@/components/forms/post-form";
+import { requireAdmin } from "@/lib/auth";
 import { createPostAction } from "@/lib/actions/content-actions";
-import { getAdminSeriesOptions } from "@/lib/queries";
+import {
+  getAdminPostCategoryOptions,
+  getAdminPostLocalizationOptions,
+  getAdminSeriesOptions,
+} from "@/lib/queries";
+import { getPaperHighlightInsertionsForUser } from "@/lib/paper-library-queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewPostPage() {
-  const seriesOptions = await getAdminSeriesOptions();
+  const admin = await requireAdmin();
+  const [seriesOptions, categoryOptions, localizationOptions, paperHighlightCards] = await Promise.all([
+    getAdminSeriesOptions(),
+    getAdminPostCategoryOptions(),
+    getAdminPostLocalizationOptions(),
+    getPaperHighlightInsertionsForUser(admin.id),
+  ]);
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="section-kicker">Posts</p>
-        <h1 className="font-serif text-4xl font-semibold tracking-tight">Create a new article</h1>
+        <p className="section-kicker">文章</p>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight">新建文章</h1>
       </div>
-      <PostForm action={createPostAction} submitLabel="Create article" seriesOptions={seriesOptions} />
+      <PostForm
+        action={createPostAction}
+        submitLabel="创建文章"
+        seriesOptions={seriesOptions}
+        categoryOptions={categoryOptions}
+        localizationOptions={localizationOptions}
+        paperHighlightCards={paperHighlightCards}
+      />
     </div>
   );
 }

@@ -35,6 +35,7 @@ export async function snapshotPostRevision(
       excerpt: post.excerpt,
       content: post.content,
       category: post.category,
+      language: post.language,
       tags: post.tags,
       status: post.status,
       pinned: post.pinned,
@@ -43,6 +44,7 @@ export async function snapshotPostRevision(
       readTimeMinutes: post.readTimeMinutes,
       seriesId: post.seriesId,
       seriesOrder: post.seriesOrder,
+      translationOfId: post.translationOfId,
       publishedAt: post.publishedAt,
     },
   });

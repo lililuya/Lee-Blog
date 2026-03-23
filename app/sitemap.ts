@@ -9,8 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...entries.staticPages.map((path) => ({ url: absoluteUrl(path) })),
     ...entries.posts.map((slug) => ({ url: absoluteUrl(`/blog/${slug}`) })),
     ...entries.notes.map((slug) => ({ url: absoluteUrl(`/notes/${slug}`) })),
-    ...entries.journal.map((slug) => ({ url: absoluteUrl(`/journal#${slug}`) })),
+    ...entries.journal.map((slug) => ({ url: absoluteUrl(`/journal/${slug}`) })),
     ...entries.digests.map((slug) => ({ url: absoluteUrl(`/digest/${slug}`) })),
+    ...entries.gallery.map((slug) => ({ url: absoluteUrl(`/gallery/${slug}`) })),
     ...entries.series.map((slug) => ({ url: absoluteUrl(`/series/${slug}`) })),
     ...entries.tags.map((tag) => ({ url: absoluteUrl(`/tags/${encodeURIComponent(tag)}`) })),
     ...entries.categories.map((category) => ({

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Clock3, FileText } from "lucide-react";
 import { CategoryLinkPill } from "@/components/site/category-link-pill";
 import { TagLinkPill } from "@/components/site/tag-link-pill";
+import { formatContentLanguageShortLabel } from "@/lib/content-language";
 import { formatDate, getContentStats } from "@/lib/utils";
 
 type PostCardProps = {
@@ -11,6 +12,7 @@ type PostCardProps = {
     excerpt: string;
     content?: string;
     category: string;
+    language?: string | null;
     tags: string[];
     pinned?: boolean;
     readTimeMinutes: number;
@@ -29,10 +31,13 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           {post.pinned ? (
             <span className="rounded-full bg-[rgba(168,123,53,0.14)] px-3 py-1 text-xs font-semibold text-[var(--gold)]">
-              Pinned
+              置顶
             </span>
           ) : null}
           <CategoryLinkPill category={post.category} />
+          <span className="badge-soft bg-[rgba(20,33,43,0.05)] text-[var(--ink)]">
+            {formatContentLanguageShortLabel(post.language)}
+          </span>
         </div>
         <span>{formatDate(post.publishedAt)}</span>
       </div>
@@ -49,15 +54,15 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
           <span className="inline-flex items-center gap-2">
             <Clock3 className="h-4 w-4" />
-            {readMinutes} min read
+            {readMinutes} 分钟阅读
           </span>
           <span className="inline-flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            {stats.characterCount.toLocaleString()} chars
+            {stats.characterCount.toLocaleString("zh-CN")} 字
           </span>
         </div>
         <Link href={`/blog/${post.slug}`} className="section-link-pill section-link-pill--compact">
-          <span>Read article</span>
+          <span>阅读文章</span>
           <ArrowUpRight className="h-4 w-4" />
         </Link>
       </div>

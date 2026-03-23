@@ -1,5 +1,10 @@
 import { PostStatus } from "@prisma/client";
+import { ContentQualityChecklist } from "@/components/forms/content-quality-checklist";
 import { DraftAutosave } from "@/components/forms/draft-autosave";
+import {
+  PaperHighlightInserter,
+  type PaperHighlightInsertItem,
+} from "@/components/forms/paper-highlight-inserter";
 import { SubmitButton } from "@/components/ui/submit-button";
 
 type NoteFormProps = {
@@ -11,6 +16,7 @@ type NoteFormProps = {
     title: string;
     featured?: boolean;
   }>;
+  paperHighlightCards?: PaperHighlightInsertItem[];
   note?: {
     id: string;
     title: string;
@@ -57,6 +63,7 @@ export function NoteForm({
   submitLabel,
   confirmMessage,
   seriesOptions = [],
+  paperHighlightCards = [],
   note,
 }: NoteFormProps) {
   const formId = note ? `note-form-${note.id}` : "note-form-new";
@@ -73,15 +80,29 @@ export function NoteForm({
 
       <DraftAutosave formId={formId} storageKey={storageKey} fields={NOTE_DRAFT_FIELDS} />
 
+      <ContentQualityChecklist
+        formId={formId}
+        kind="note"
+        initialData={{
+          title: note?.title ?? "",
+          summary: note?.summary ?? "",
+          content: note?.content ?? "",
+          noteType: note?.noteType ?? "",
+          tags: note?.tags ?? [],
+          status: note?.status ?? PostStatus.DRAFT,
+          publishedAt: toDateTimeLocalString(note?.publishedAt),
+        }}
+      />
+
       <div className="grid gap-5 md:grid-cols-2">
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Title</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">标题</span>
           <input
             name="title"
             defaultValue={note?.title}
             required
             className="field"
-            placeholder="For example: RAG evaluation checklist for small research teams"
+            placeholder="例如：小型研究团队的 RAG 评估清单"
           />
         </label>
 
@@ -91,23 +112,23 @@ export function NoteForm({
             name="slug"
             defaultValue={note?.slug}
             className="field"
-            placeholder="Leave empty to generate from the title"
+            placeholder="留空则根据标题自动生成"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Note Type</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">笔记类型</span>
           <input
             name="noteType"
-            defaultValue={note?.noteType ?? "Knowledge Note"}
+            defaultValue={note?.noteType ?? "知识笔记"}
             required
             className="field"
-            placeholder="Checklist / Method Note / Reading Note"
+            placeholder="例如：清单 / 方法笔记 / 阅读笔记"
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Summary</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">简介</span>
           <textarea
             name="summary"
             defaultValue={note?.summary}
@@ -115,12 +136,12 @@ export function NoteForm({
             minLength={12}
             rows={4}
             className="field min-h-28 resize-y"
-            placeholder="Write a short summary for index pages, search, and related topic browsing."
+            placeholder="写一段简短说明，用于列表页、搜索和相关主题浏览。"
           />
         </label>
 
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Body (Markdown)</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">正文（Markdown）</span>
           <textarea
             name="content"
             defaultValue={note?.content}
@@ -128,31 +149,35 @@ export function NoteForm({
             minLength={24}
             rows={18}
             className="field min-h-72 resize-y font-mono text-sm"
-            placeholder={"## Why this note exists\n\nWrite the reusable note body here in Markdown."}
+            placeholder={"## 这篇笔记为什么存在\n\n在这里写可复用的 Markdown 笔记正文。"}
           />
         </label>
 
+        <div className="md:col-span-2">
+          <PaperHighlightInserter formId={formId} items={paperHighlightCards} />
+        </div>
+
         <label className="space-y-2 md:col-span-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Tags</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">标签</span>
           <input
             name="tags"
             defaultValue={note?.tags.join(", ")}
             className="field"
-            placeholder="rag, evaluation, checklist"
+            placeholder="例如：rag, evaluation, checklist"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Status</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">状态</span>
           <select name="status" className="field" defaultValue={note?.status ?? PostStatus.DRAFT}>
-            <option value={PostStatus.DRAFT}>Draft</option>
-            <option value={PostStatus.PUBLISHED}>Published</option>
-            <option value={PostStatus.ARCHIVED}>Archived</option>
+            <option value={PostStatus.DRAFT}>草稿</option>
+            <option value={PostStatus.PUBLISHED}>已发布</option>
+            <option value={PostStatus.ARCHIVED}>已归档</option>
           </select>
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Published At</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">发布时间</span>
           <input
             name="publishedAt"
             type="datetime-local"
@@ -162,12 +187,12 @@ export function NoteForm({
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Series</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">所属专题</span>
           <select name="seriesId" className="field" defaultValue={note?.seriesId ?? ""}>
-            <option value="">Standalone note</option>
+            <option value="">独立笔记</option>
             {seriesOptions.map((series) => (
               <option key={series.id} value={series.id}>
-                {series.featured ? "Featured · " : ""}
+                {series.featured ? "精选专题 · " : ""}
                 {series.title}
               </option>
             ))}
@@ -175,7 +200,7 @@ export function NoteForm({
         </label>
 
         <label className="space-y-2">
-          <span className="text-sm font-semibold text-[var(--ink)]">Series Order</span>
+          <span className="text-sm font-semibold text-[var(--ink)]">专题顺序</span>
           <input
             name="seriesOrder"
             type="number"
@@ -195,11 +220,11 @@ export function NoteForm({
           defaultChecked={note?.featured}
           className="h-4 w-4 accent-[var(--accent)]"
         />
-        Mark as featured
+        标记为精选
       </label>
 
       <div className="text-xs leading-6 text-[var(--ink-soft)]">
-        Series order is optional and only used when this note belongs to a curated reading sequence.
+        专题顺序是可选项，只有当这篇笔记属于某个阅读专题时才会生效。
       </div>
 
       <SubmitButton>{submitLabel}</SubmitButton>

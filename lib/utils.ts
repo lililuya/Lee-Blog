@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -8,10 +9,10 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(date: Date | string | null | undefined, pattern = "MMM d, yyyy") {
   if (!date) {
-    return "TBD";
+    return "待定";
   }
 
-  return format(new Date(date), pattern);
+  return format(new Date(date), pattern, { locale: zhCN });
 }
 
 export function slugify(value: string) {
@@ -30,10 +31,20 @@ export function parseCsv(input: string) {
     .filter(Boolean);
 }
 
+export function normalizeTaxonomyValue(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
 function stripMarkdownToText(markdown: string) {
   return markdown
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/~~~[\s\S]*?~~~/g, " ")
+    .replace(/:::citation-card\s*([\s\S]*?)\s*:::/g, (_match, block) =>
+      String(block)
+        .replace(/^\s*(title|authors|url|quote|note|year|arxivid)\s*:\s*/gim, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
     .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/`([^`]+)`/g, "$1")

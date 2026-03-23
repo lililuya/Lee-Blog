@@ -20,9 +20,11 @@ export default async function ResetPasswordPage({
   if (!isDatabaseConfigured()) {
     return (
       <div className="container-shell py-16">
-        <section className="mx-auto max-w-3xl rounded-[2rem] border border-dashed border-[rgba(168,123,53,0.4)] bg-[rgba(168,123,53,0.08)] p-8 text-sm leading-7 text-[var(--ink-soft)]">
-          Password reset is unavailable because the database is not configured in this environment.
-        </section>
+        <div className="editorial-shell">
+          <section className="rounded-[1.8rem] border border-dashed border-[rgba(168,123,53,0.4)] bg-[rgba(168,123,53,0.08)] p-8 text-sm leading-7 text-[var(--ink-soft)]">
+            当前环境尚未配置数据库，因此暂时无法使用密码重置功能。
+          </section>
+        </div>
       </div>
     );
   }
@@ -30,61 +32,65 @@ export default async function ResetPasswordPage({
   const tokenState = await inspectPasswordResetToken(token);
 
   return (
-    <div className="container-shell grid min-h-[calc(100vh-9rem)] gap-8 py-16 lg:grid-cols-[0.95fr_0.85fr] lg:items-center">
-      <section className="space-y-6">
-        <p className="section-kicker">Security</p>
-        <h1 className="font-serif text-[clamp(2.5rem,5vw,4.6rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
-          Choose a new password.
-        </h1>
+    <div className="container-shell py-16">
+      <div className="editorial-shell grid gap-10 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start">
+        <section className="space-y-6">
+          <p className="section-kicker">安全</p>
+          <h1 className="font-serif text-[clamp(2.5rem,5vw,4.6rem)] font-semibold leading-[0.98] tracking-[-0.05em]">
+            设置新密码。
+          </h1>
 
-        {tokenState.status === "valid" ? (
-          <>
-            <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
-              Set a fresh password for <span className="font-semibold text-[var(--ink)]">{tokenState.email}</span>.
-            </p>
-            <div className="rounded-[1.6rem] border border-black/8 bg-white/75 p-5 text-sm leading-7 text-[var(--ink-soft)]">
-              This link stays active until {formatDate(tokenState.expiresAt, "MMM d, yyyy HH:mm")}. Once the password changes, every older reset link and active session will be revoked.
+          {tokenState.status === "valid" ? (
+            <>
+              <p className="max-w-2xl text-base leading-8 text-[var(--ink-soft)]">
+                为 <span className="font-semibold text-[var(--ink)]">{tokenState.email}</span>{" "}
+                设置一个新的登录密码。
+              </p>
+              <div className="rounded-[1.6rem] border border-black/8 bg-white/75 p-5 text-sm leading-7 text-[var(--ink-soft)]">
+                这个链接会在 {formatDate(tokenState.expiresAt, "yyyy-MM-dd HH:mm")} 前有效。密码更新后，
+                所有旧的重置链接和已登录会话都会被撤销。
+              </div>
+            </>
+          ) : null}
+
+          {tokenState.status === "missing" ? (
+            <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
+              这个密码重置链接不完整，请重新申请新的链接后再继续。
             </div>
-          </>
-        ) : null}
+          ) : null}
 
-        {tokenState.status === "missing" ? (
-          <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
-            The password reset link is incomplete. Request a fresh link to continue.
-          </div>
-        ) : null}
-
-        {tokenState.status === "invalid" ? (
-          <div className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm leading-7 text-rose-700">
-            This password reset link is invalid or has already been used.
-          </div>
-        ) : null}
-
-        {tokenState.status === "expired" ? (
-          <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
-            This password reset link expired at {formatDate(tokenState.expiresAt, "MMM d, yyyy HH:mm")}. Request a fresh one to continue.
-          </div>
-        ) : null}
-      </section>
-
-      <div className="space-y-4">
-        {tokenState.status === "valid" ? (
-          <ResetPasswordForm token={token} />
-        ) : (
-          <div className="rounded-[2rem] border border-black/8 bg-white/84 p-6 shadow-[0_24px_60px_rgba(20,33,43,0.06)]">
-            <p className="text-sm leading-7 text-[var(--ink-soft)]">
-              Request a new password reset email and open the latest link from your inbox.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/forgot-password" className="btn-primary">
-                Request a new link
-              </Link>
-              <Link href="/login" className="btn-secondary">
-                Back to sign in
-              </Link>
+          {tokenState.status === "invalid" ? (
+            <div className="rounded-[1.6rem] border border-rose-200 bg-rose-50 p-5 text-sm leading-7 text-rose-700">
+              这个密码重置链接无效，或者已经被使用过。
             </div>
-          </div>
-        )}
+          ) : null}
+
+          {tokenState.status === "expired" ? (
+            <div className="rounded-[1.6rem] border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-700">
+              这个密码重置链接已于 {formatDate(tokenState.expiresAt, "yyyy-MM-dd HH:mm")} 失效，请重新申请。
+            </div>
+          ) : null}
+        </section>
+
+        <div className="space-y-4">
+          {tokenState.status === "valid" ? (
+            <ResetPasswordForm token={token} />
+          ) : (
+            <div className="editorial-form-shell">
+              <p className="text-sm leading-7 text-[var(--ink-soft)]">
+                请重新申请密码重置邮件，并打开收件箱里最新的一条链接。
+              </p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link href="/forgot-password" className="btn-primary">
+                  重新申请链接
+                </Link>
+                <Link href="/login" className="btn-secondary">
+                  返回登录
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

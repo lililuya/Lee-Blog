@@ -24,7 +24,7 @@ export function SiteHeader({ currentUser, unreadNotificationCount }: SiteHeaderP
             {!currentUser ? (
               <Link href="/login" className="btn-secondary">
                 <LogIn className="h-4 w-4" />
-                Admin Login
+                管理员登录
               </Link>
             ) : null}
           </div>

@@ -42,6 +42,7 @@ excerpt: Why a unified database-backed blog can still work beautifully with Mark
 category: Architecture
 tags: blog, markdown, workflow
 status: PUBLISHED
+pinned: false
 featured: true
 publishedAt: 2026-03-12T08:00:00+08:00
 coverImageUrl: https://example.com/cover.jpg
@@ -51,6 +52,10 @@ coverImageUrl: https://example.com/cover.jpg
 
 Write normal Markdown here.
 ```
+
+`pinned: true` is supported for blog posts.
+Only one published post should normally be pinned at a time.
+When a published Markdown post is synced with `pinned: true`, the current published pinned post will be unpinned automatically.
 
 ## Notes frontmatter example
 

@@ -23,7 +23,7 @@ export function NoteCard({ note }: NoteCardProps) {
       <div className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,_transparent,_rgba(168,123,53,0.52),_transparent)] opacity-0 transition group-hover:opacity-100" />
       <div className="mb-5 flex items-center justify-between gap-4 text-sm text-[var(--ink-soft)]">
         <span className="badge-soft bg-[rgba(168,123,53,0.12)] text-[var(--gold)]">
-          {note.noteType ?? "Knowledge Note"}
+          {note.noteType ?? "知识笔记"}
         </span>
         <span>{formatDate(note.publishedAt)}</span>
       </div>
@@ -40,15 +40,15 @@ export function NoteCard({ note }: NoteCardProps) {
         <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-soft)]">
           <span className="inline-flex items-center gap-2">
             <Clock3 className="h-4 w-4" />
-            {stats.estimatedMinutes} min read
+            {stats.estimatedMinutes} 分钟阅读
           </span>
           <span className="inline-flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            {stats.characterCount.toLocaleString()} chars
+            {stats.characterCount.toLocaleString("zh-CN")} 字
           </span>
         </div>
         <Link href={`/notes/${note.slug}`} className="section-link-pill section-link-pill--compact">
-          <span>Read note</span>
+          <span>阅读笔记</span>
           <ArrowUpRight className="h-4 w-4" />
         </Link>
       </div>

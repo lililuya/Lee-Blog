@@ -13,7 +13,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminDigestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ generated?: string; deleted?: string; updated?: string }>;
+  searchParams: Promise<{
+    generated?: string;
+    deleted?: string;
+    updated?: string;
+    emailed?: string;
+    skipped?: string;
+    failed?: string;
+  }>;
 }) {
   const [digests, seriesOptions, params] = await Promise.all([
     getAdminWeeklyDigests(),
@@ -45,7 +52,9 @@ export default async function AdminDigestsPage({
       {params.generated || params.deleted || params.updated ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {params.generated
-            ? "Weekly digest generated."
+            ? `Weekly digest generated. Email sent: ${Number(params.emailed ?? 0)} | skipped: ${Number(
+                params.skipped ?? 0,
+              )} | failed: ${Number(params.failed ?? 0)}.`
             : params.updated
               ? "Digest series settings updated."
               : "Weekly digest deleted."}

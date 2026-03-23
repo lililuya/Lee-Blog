@@ -87,7 +87,8 @@ npm run rag:sync
 ```bash
 npm ci
 npm run db:push
-npm run db:seed
+npm run db:bootstrap
+npm run db:seed:demo
 npm run dev
 ```
 
@@ -97,7 +98,8 @@ npm run dev
 docker compose up -d db
 docker compose up -d app
 docker compose run --rm app npm run db:push
-docker compose run --rm app npm run db:seed
+docker compose run --rm app npm run db:bootstrap
+docker compose run --rm app npm run db:seed:demo
 ```
 
 ## 4. 首次部署检查顺序
@@ -109,7 +111,7 @@ docker compose run --rm app npm run db:seed
 3. 启动 PostgreSQL
 4. 拉取或构建应用镜像
 5. 执行 `npm run db:push`
-6. 执行 `npm run db:seed`
+6. 执行 `npm run db:bootstrap`
 7. 启动应用容器
 8. 验证管理员登录、游客评论与邮件链路
 9. 验证定时任务

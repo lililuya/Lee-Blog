@@ -78,7 +78,8 @@ If you want to understand the repository efficiently, this order works well:
 - `npm run lint`
 - `npm run build`
 - `npm run db:push`
-- `npm run db:seed`
+- `npm run db:bootstrap`
+- `npm run db:seed:demo`
 - `npm run content:sync`
 - `npm run papers:sync`
 - `npm run digest:generate`

@@ -12,13 +12,13 @@ type CitationPanelProps = {
 export function CitationPanel({
   citation,
   bibtex,
-  title = "Citation export",
-  description = "Copy a reader-facing citation or the BibTeX entry for your notes, references, or literature tracker.",
+  title = "引用导出",
+  description = "可以复制适合阅读展示的引用文本，或 BibTeX 条目，方便整理到笔记、参考文献或论文追踪列表中。",
   defaultOpen = false,
 }: CitationPanelProps) {
   return (
     <details
-      className="rounded-[1.6rem] border border-black/8 bg-white/70 p-4"
+      className="border-t border-black/8 pt-6"
       {...(defaultOpen ? { open: true } : {})}
     >
       <summary className="cursor-pointer list-none">
@@ -32,12 +32,12 @@ export function CitationPanel({
           </div>
           <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--ink-soft)]">
             <FileCode2 className="h-3.5 w-3.5" />
-            BibTeX ready
+            已支持 BibTeX
           </span>
         </div>
       </summary>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <CopySnippet label="Citation" value={citation} />
+        <CopySnippet label="引用文本" value={citation} />
         <CopySnippet label="BibTeX" value={bibtex} mode="code" />
       </div>
     </details>
